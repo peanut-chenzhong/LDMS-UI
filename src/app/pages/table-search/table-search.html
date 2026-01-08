@@ -1,0 +1,158 @@
+<div class="page-container">
+  <!-- 页面标题 -->
+  <div class="page-header">
+    <h1 class="page-title">Table Search</h1>
+    <p class="page-desc">Query and browse table metadata information across databases.</p>
+  </div>
+
+  <!-- 筛选栏 -->
+  <div class="filter-bar">
+    <div class="filter-controls">
+      <div class="filter-item">
+        <label class="filter-label">Database</label>
+        <select class="filter-select" [(ngModel)]="filters.database">
+          <option value="">All Databases</option>
+          @for (db of databases; track db) {
+            <option [value]="db">{{ db }}</option>
+          }
+        </select>
+      </div>
+      <div class="filter-item">
+        <label class="filter-label">TableName</label>
+        <select class="filter-select" [(ngModel)]="filters.tableName">
+          <option value="">All Tables</option>
+          @for (table of tableNames; track table) {
+            <option [value]="table">{{ table }}</option>
+          }
+        </select>
+      </div>
+    </div>
+    <div class="filter-actions">
+      <button class="btn btn-primary" (click)="onSearch()">Search</button>
+      <button class="btn btn-secondary" (click)="onReset()">Reset</button>
+    </div>
+  </div>
+
+  <!-- 表格区域 -->
+  <div class="table-container">
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <!-- 固定列 -->
+            @for (col of fixedColumns; track col.key) {
+              <th class="fixed-col">{{ col.label }}</th>
+            }
+            <!-- 可拖拽列 -->
+            @for (col of draggableColumns; track col.key; let i = $index) {
+              <th 
+                class="draggable-col"
+                [class.sortable]="col.sortable"
+                draggable="true"
+                (dragstart)="onDragStart($event, i)"
+                (dragover)="onDragOver($event, i)"
+                (dragend)="onDragEnd()"
+                (drop)="onDrop($event, i)"
+                [class.drag-over]="dragOverIndex === i"
+                (click)="col.sortable ? onSort(col.key) : null">
+                <span class="drag-handle">⋮⋮</span>
+                {{ col.label }}
+                @if (col.sortable) {
+                  <span class="sort-icon" [class.active]="sortField === col.key">
+                    @if (sortField === col.key) {
+                      {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                    } @else {
+                      ↕
+                    }
+                  </span>
+                }
+              </th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of paginatedData; track row.tablename) {
+            <tr 
+              [class.selected]="selectedRow === row"
+              (click)="onRowSelect(row)">
+              <!-- 固定列数据 -->
+              @for (col of fixedColumns; track col.key) {
+                <td class="fixed-col">{{ row[col.key] }}</td>
+              }
+              <!-- 可拖拽列数据 -->
+              @for (col of draggableColumns; track col.key) {
+                <td>{{ row[col.key] }}</td>
+              }
+            </tr>
+          } @empty {
+            <tr>
+              <td [attr.colspan]="fixedColumns.length + draggableColumns.length" class="empty-cell">No data available</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 分页控件 -->
+    <div class="pagination">
+      <div class="pagination-left">
+        <span class="pagination-total">Total {{ filteredData.length }} items</span>
+        <div class="page-size-selector">
+          <label>每页</label>
+          <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
+            @for (size of pageSizeOptions; track size) {
+              <option [value]="size">{{ size }}</option>
+            }
+          </select>
+          <label>条</label>
+        </div>
+      </div>
+      <div class="pagination-controls">
+        <button 
+          class="pagination-btn" 
+          [disabled]="currentPage === 1"
+          (click)="goToPage(currentPage - 1)">
+          ‹ Prev
+        </button>
+        @for (page of visiblePages; track page) {
+          @if (page === '...') {
+            <span class="pagination-ellipsis">...</span>
+          } @else {
+            <button 
+              class="pagination-btn pagination-num"
+              [class.active]="currentPage === page"
+              (click)="goToPage(+page)">
+              {{ page }}
+            </button>
+          }
+        }
+        <button 
+          class="pagination-btn"
+          [disabled]="currentPage === totalPages"
+          (click)="goToPage(currentPage + 1)">
+          Next ›
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 折线图区域 -->
+  @if (selectedRow) {
+    <div class="chart-section">
+      <div class="chart-header">
+        <h3 class="chart-title">
+          <span class="chart-icon">📊</span>
+          {{ selectedRow.database }}.{{ selectedRow.tablename }} - 30天趋势
+        </h3>
+        <button class="btn-close" (click)="selectedRow = null">✕</button>
+      </div>
+      <div class="chart-container">
+        <canvas baseChart
+          [data]="lineChartData"
+          [options]="lineChartOptions"
+          type="line">
+        </canvas>
+      </div>
+    </div>
+  }
+</div>
