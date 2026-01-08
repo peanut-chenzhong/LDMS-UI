@@ -1,0 +1,347 @@
+<div class="page-container">
+  <!-- 页面标题 -->
+  <div class="page-header">
+    <h1 class="page-title">Hudi Table Analysis Tasks</h1>
+    <p class="page-desc">View and manage Hudi table analysis task execution status.</p>
+  </div>
+
+  <!-- 操作栏 -->
+  <div class="action-bar">
+    <button class="btn btn-create" (click)="openCreateModal()">
+      <span class="btn-icon">+</span> 新增任务
+    </button>
+  </div>
+
+  <!-- 筛选栏 -->
+  <div class="filter-bar">
+    <div class="filter-controls">
+      <div class="filter-item">
+        <label class="filter-label">任务状态</label>
+        <select class="filter-select" [(ngModel)]="statusFilter" (ngModelChange)="onStatusFilterChange()">
+          @for (opt of statusOptions; track opt.value) {
+            <option [value]="opt.value">{{ opt.label }}</option>
+          }
+        </select>
+      </div>
+      <div class="filter-item">
+        <label class="filter-label">Database</label>
+        <div class="search-dropdown-container">
+          <input 
+            type="text" 
+            class="filter-input filter-input-dropdown" 
+            [(ngModel)]="searchDatabase"
+            (input)="onDatabaseInputChange()"
+            (focus)="onDatabaseFocus()"
+            (keyup.enter)="onSearch()"
+            placeholder="选择或输入database">
+          <span class="dropdown-arrow">▼</span>
+          @if (showDatabaseDropdown && filteredDatabases.length > 0) {
+            <div class="search-dropdown">
+              @for (db of filteredDatabases; track db) {
+                <div 
+                  class="dropdown-item" 
+                  [class.selected]="searchDatabase === db"
+                  (click)="selectDatabase(db)">
+                  {{ db }}
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+      <div class="filter-item">
+        <label class="filter-label">TableName</label>
+        <div class="search-dropdown-container">
+          <input 
+            type="text" 
+            class="filter-input filter-input-dropdown" 
+            [(ngModel)]="searchTableName"
+            (input)="onTableNameInputChange()"
+            (focus)="onTableNameFocus()"
+            (keyup.enter)="onSearch()"
+            placeholder="选择或输入表名">
+          <span class="dropdown-arrow">▼</span>
+          @if (showTableNameDropdown && filteredTableNames.length > 0) {
+            <div class="search-dropdown">
+              @for (table of filteredTableNames; track table) {
+                <div 
+                  class="dropdown-item"
+                  [class.selected]="searchTableName === table"
+                  (click)="selectTableName(table)">
+                  {{ table }}
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+    <div class="filter-actions">
+      <button class="btn btn-primary" (click)="onSearch()">Search</button>
+      <button class="btn btn-secondary" (click)="onReset()">Reset</button>
+    </div>
+  </div>
+
+  <!-- 表格区域 -->
+  <div class="table-container">
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="col-task-name">任务名</th>
+            <th class="col-create-time sortable" (click)="onSort('createTime')">
+              创建时间
+              <span class="sort-icon" [class.active]="sortField === 'createTime'">
+                @if (sortField === 'createTime') {
+                  {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                } @else {
+                  ↕
+                }
+              </span>
+            </th>
+            <th class="col-status sortable" (click)="onSort('status')">
+              任务状态
+              <span class="sort-icon" [class.active]="sortField === 'status'">
+                @if (sortField === 'status') {
+                  {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                } @else {
+                  ↕
+                }
+              </span>
+            </th>
+            <th class="col-tables sortable" (click)="onSort('tableCount')">
+              表数量
+              <span class="sort-icon" [class.active]="sortField === 'tableCount'">
+                @if (sortField === 'tableCount') {
+                  {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                } @else {
+                  ↕
+                }
+              </span>
+            </th>
+            <th class="col-start-time sortable" (click)="onSort('startTime')">
+              开始时间
+              <span class="sort-icon" [class.active]="sortField === 'startTime'">
+                @if (sortField === 'startTime') {
+                  {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                } @else {
+                  ↕
+                }
+              </span>
+            </th>
+            <th class="col-end-time sortable" (click)="onSort('endTime')">
+              完成时间
+              <span class="sort-icon" [class.active]="sortField === 'endTime'">
+                @if (sortField === 'endTime') {
+                  {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                } @else {
+                  ↕
+                }
+              </span>
+            </th>
+            <th class="col-app-id">任务 AppID</th>
+            <th class="col-actions">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (task of paginatedTasks; track task.id) {
+            <tr>
+              <td class="col-task-name">
+                <span class="task-name">{{ task.taskName }}</span>
+              </td>
+              <td class="col-create-time">{{ task.createTime }}</td>
+              <td class="col-status">
+                <span class="status-badge" [ngClass]="getStatusClass(task.status)">
+                  {{ getStatusText(task.status) }}
+                </span>
+              </td>
+              <td class="col-tables">
+                <span class="tables-count" (click)="openTablesModal(task, $event)">
+                  {{ task.tables.length }}
+                </span>
+              </td>
+              <td class="col-start-time">{{ task.startTime }}</td>
+              <td class="col-end-time">{{ task.endTime }}</td>
+              <td class="col-app-id">
+                <span class="app-id" [title]="task.appId">{{ task.appId }}</span>
+              </td>
+              <td class="col-actions">
+                <div class="action-buttons">
+                  <button 
+                    class="btn-action btn-view" 
+                    [class.disabled]="!canViewReport(task)"
+                    [disabled]="!canViewReport(task)"
+                    (click)="canViewReport(task) && viewReport(task)">
+                    查看报告
+                  </button>
+                  <button 
+                    class="btn-action btn-stop" 
+                    [class.disabled]="!canStop(task)"
+                    [disabled]="!canStop(task)"
+                    (click)="canStop(task) && stopTask(task)">
+                    停止
+                  </button>
+                  <button 
+                    class="btn-action btn-delete" 
+                    [class.disabled]="!canDelete(task)"
+                    [disabled]="!canDelete(task)"
+                    (click)="canDelete(task) && deleteTask(task)">
+                    删除
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="8" class="empty-cell">暂无任务数据</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 分页控件 -->
+    <div class="pagination">
+      <div class="pagination-left">
+        <span class="pagination-total">Total {{ filteredTasks.length }} items</span>
+        <div class="page-size-selector">
+          <label>每页</label>
+          <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
+            @for (size of pageSizeOptions; track size) {
+              <option [value]="size">{{ size }}</option>
+            }
+          </select>
+          <label>条</label>
+        </div>
+      </div>
+      <div class="pagination-controls">
+        <button 
+          class="pagination-btn" 
+          [disabled]="currentPage === 1"
+          (click)="goToPage(currentPage - 1)">
+          ‹ Prev
+        </button>
+        @for (page of visiblePages; track page) {
+          @if (page === '...') {
+            <span class="pagination-ellipsis">...</span>
+          } @else {
+            <button 
+              class="pagination-btn pagination-num"
+              [class.active]="currentPage === page"
+              (click)="goToPage(+page)">
+              {{ page }}
+            </button>
+          }
+        }
+        <button 
+          class="pagination-btn"
+          [disabled]="currentPage === totalPages"
+          (click)="goToPage(currentPage + 1)">
+          Next ›
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 表列表弹窗 -->
+  @if (showTablesModal) {
+    <div class="modal-overlay" (click)="closeTablesModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3 class="modal-title">分析表列表</h3>
+          <button class="modal-close" (click)="closeTablesModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-task-name">任务: {{ modalTaskName }}</p>
+          <div class="tables-list">
+            @for (table of modalTables; track table; let i = $index) {
+              <div class="table-item">
+                <span class="table-index">{{ i + 1 }}</span>
+                <span class="table-name">{{ table }}</span>
+              </div>
+            }
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-modal-close" (click)="closeTablesModal()">关闭</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- 新增任务弹窗 -->
+  @if (showCreateModal) {
+    <div class="modal-overlay" (click)="closeCreateModal()">
+      <div class="modal-content modal-create" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3 class="modal-title">新增分析任务</h3>
+          <button class="modal-close" (click)="closeCreateModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <!-- 分析项选择 -->
+          <div class="form-section">
+            <label class="form-label">分析项</label>
+            <div class="checkbox-group">
+              @for (opt of analysisOptions; track opt.key) {
+                <label class="checkbox-item">
+                  <input type="checkbox" [(ngModel)]="opt.checked">
+                  <span class="checkbox-label">{{ opt.label }}</span>
+                </label>
+              }
+            </div>
+          </div>
+
+          <!-- 数据库选择 -->
+          <div class="form-section">
+            <label class="form-label">选择 Database</label>
+            <select class="form-select" [(ngModel)]="selectedDatabase" (ngModelChange)="onDatabaseChange()">
+              <option value="">请选择数据库</option>
+              @for (db of databaseList; track db) {
+                <option [value]="db">{{ db }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- 表选择 -->
+          @if (selectedDatabase) {
+            <div class="form-section">
+              <div class="form-label-row">
+                <label class="form-label">选择分析表</label>
+                <button class="btn-select-all" (click)="toggleAllTables()">
+                  {{ selectedTables.length === availableTables.length ? '取消全选' : '全选' }}
+                </button>
+              </div>
+              <div class="table-search-box">
+                <input 
+                  type="text" 
+                  class="table-search-input"
+                  [(ngModel)]="tableSearchKeyword"
+                  placeholder="输入表名搜索...">
+              </div>
+              <div class="tables-select-box">
+                @for (table of filteredAvailableTables; track table) {
+                  <label class="table-checkbox-item" [class.selected]="isTableSelected(table)">
+                    <input 
+                      type="checkbox" 
+                      [checked]="isTableSelected(table)"
+                      (change)="toggleTableSelection(table)">
+                    <span class="table-checkbox-name">{{ table }}</span>
+                  </label>
+                } @empty {
+                  <div class="no-tables">未找到匹配的表</div>
+                }
+              </div>
+              <div class="selected-count">
+                已选择 {{ selectedTables.length }} / {{ availableTables.length }} 张表
+              </div>
+            </div>
+          }
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="closeCreateModal()">取消</button>
+          <button class="btn btn-primary" (click)="submitCreateTask()">提交</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
