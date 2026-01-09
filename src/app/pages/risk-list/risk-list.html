@@ -1,0 +1,153 @@
+<div class="page-container">
+  <!-- 页面标题 -->
+  <div class="page-header">
+    <h1 class="page-title">Risk Analysis List</h1>
+    <p class="page-desc">View identified risks and issues from Hudi table analysis.</p>
+  </div>
+
+  <!-- 筛选栏 -->
+  <div class="filter-bar">
+    <div class="filter-controls">
+      <div class="filter-item">
+        <label class="filter-label">Database</label>
+        <div class="search-dropdown-container">
+          <input 
+            type="text" 
+            class="filter-input filter-input-dropdown" 
+            [(ngModel)]="searchDatabase"
+            (input)="onDatabaseInputChange()"
+            (focus)="onDatabaseFocus()"
+            (keyup.enter)="onSearch()"
+            placeholder="选择或输入database">
+          <span class="dropdown-arrow">▼</span>
+          @if (showDatabaseDropdown && filteredDatabases.length > 0) {
+            <div class="search-dropdown">
+              @for (db of filteredDatabases; track db) {
+                <div 
+                  class="dropdown-item" 
+                  [class.selected]="searchDatabase === db"
+                  (click)="selectDatabase(db)">
+                  {{ db }}
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+      <div class="filter-item">
+        <label class="filter-label">TableName</label>
+        <div class="search-dropdown-container">
+          <input 
+            type="text" 
+            class="filter-input filter-input-dropdown" 
+            [(ngModel)]="searchTableName"
+            (input)="onTableNameInputChange()"
+            (focus)="onTableNameFocus()"
+            (keyup.enter)="onSearch()"
+            placeholder="选择或输入表名">
+          <span class="dropdown-arrow">▼</span>
+          @if (showTableNameDropdown && filteredTableNames.length > 0) {
+            <div class="search-dropdown">
+              @for (table of filteredTableNames; track table) {
+                <div 
+                  class="dropdown-item"
+                  [class.selected]="searchTableName === table"
+                  (click)="selectTableName(table)">
+                  {{ table }}
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+      <div class="filter-item">
+        <label class="filter-label">风险类型</label>
+        <select class="filter-select" [(ngModel)]="searchRiskType">
+          @for (opt of riskTypeOptions; track opt.value) {
+            <option [value]="opt.value">{{ opt.label }}</option>
+          }
+        </select>
+      </div>
+    </div>
+    <div class="filter-actions">
+      <button class="btn btn-primary" (click)="onSearch()">Search</button>
+      <button class="btn btn-secondary" (click)="onReset()">Reset</button>
+    </div>
+  </div>
+
+  <!-- 表格区域 -->
+  <div class="table-container">
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="col-database">数据库名</th>
+            <th class="col-tablename">表名</th>
+            <th class="col-risk-type">风险类型</th>
+            <th class="col-reason">原因</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (risk of paginatedRisks; track risk.id) {
+            <tr>
+              <td class="col-database">{{ risk.database }}</td>
+              <td class="col-tablename">{{ risk.tablename }}</td>
+              <td class="col-risk-type">
+                <span class="risk-badge" [ngClass]="getRiskTypeClass(risk.riskType)">
+                  {{ risk.riskType }}
+                </span>
+              </td>
+              <td class="col-reason">{{ risk.reason }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4" class="empty-cell">暂无风险数据</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 分页控件 -->
+    <div class="pagination">
+      <div class="pagination-left">
+        <span class="pagination-total">Total {{ filteredRisks.length }} items</span>
+        <div class="page-size-selector">
+          <label>每页</label>
+          <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
+            @for (size of pageSizeOptions; track size) {
+              <option [value]="size">{{ size }}</option>
+            }
+          </select>
+          <label>条</label>
+        </div>
+      </div>
+      <div class="pagination-controls">
+        <button 
+          class="pagination-btn" 
+          [disabled]="currentPage === 1"
+          (click)="goToPage(currentPage - 1)">
+          ‹ Prev
+        </button>
+        @for (page of visiblePages; track page) {
+          @if (page === '...') {
+            <span class="pagination-ellipsis">...</span>
+          } @else {
+            <button 
+              class="pagination-btn pagination-num"
+              [class.active]="currentPage === page"
+              (click)="goToPage(+page)">
+              {{ page }}
+            </button>
+          }
+        }
+        <button 
+          class="pagination-btn"
+          [disabled]="currentPage === totalPages"
+          (click)="goToPage(currentPage + 1)">
+          Next ›
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

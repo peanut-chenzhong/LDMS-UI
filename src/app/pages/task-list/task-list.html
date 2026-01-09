@@ -289,6 +289,29 @@
                 </label>
               }
             </div>
+            <!-- 分区存储分析（带模式选择） -->
+            <div class="partition-analysis-row">
+              <label class="checkbox-item">
+                <input type="checkbox" [(ngModel)]="partitionAnalysisEnabled">
+                <span class="checkbox-label">分区存储分析</span>
+              </label>
+              <select 
+                class="partition-mode-select" 
+                [(ngModel)]="partitionAnalysisMode"
+                [disabled]="!partitionAnalysisEnabled">
+                @for (mode of partitionAnalysisModes; track mode.value) {
+                  <option [value]="mode.value">{{ mode.label }}</option>
+                }
+              </select>
+              @if (partitionAnalysisEnabled && partitionAnalysisMode === 'specified_commit') {
+                <input 
+                  type="text" 
+                  class="commit-time-input"
+                  [(ngModel)]="specifiedCommitTime"
+                  placeholder="yyyyMMddHHmmssSSS"
+                  maxlength="17">
+              }
+            </div>
           </div>
 
           <!-- 数据库选择 -->

@@ -1,0 +1,447 @@
+// 华为云风格变量
+$primary-color: #0070cc;
+$primary-hover: #005ba6;
+$border-color: #dcdee5;
+$bg-gray: #f5f6f7;
+$text-primary: #1a1a1a;
+$text-secondary: #575d6c;
+$white: #ffffff;
+$row-hover: #f5f7fa;
+
+// 风险等级颜色
+$risk-error: #e6483d;
+$risk-warning: #f5a623;
+$risk-info: #0070cc;
+
+.page-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px;
+  background: $white;
+  min-height: 100vh;
+}
+
+// 页面标题
+.page-header {
+  margin-bottom: 20px;
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: $text-primary;
+  margin: 0 0 8px 0;
+  line-height: 1.4;
+}
+
+.page-desc {
+  font-size: 14px;
+  color: $text-secondary;
+  margin: 0;
+  line-height: 1.5;
+}
+
+// 筛选栏
+.filter-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 16px 0;
+  border-bottom: 1px solid $border-color;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-label {
+  font-size: 13px;
+  color: $text-secondary;
+  font-weight: 500;
+}
+
+.filter-input {
+  min-width: 160px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid $border-color;
+  border-radius: 4px;
+  font-size: 14px;
+  color: $text-primary;
+  transition: border-color 0.2s;
+
+  &::placeholder {
+    color: #b8bcc4;
+  }
+
+  &:hover {
+    border-color: $primary-color;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $primary-color;
+    box-shadow: 0 0 0 2px rgba(0, 112, 204, 0.1);
+  }
+}
+
+.filter-input-dropdown {
+  padding-right: 28px;
+}
+
+.filter-select {
+  min-width: 160px;
+  height: 32px;
+  padding: 0 32px 0 12px;
+  border: 1px solid $border-color;
+  border-radius: 4px;
+  background: $white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23575d6c' d='M2.5 4.5l3.5 3.5 3.5-3.5'/%3E%3C/svg%3E") no-repeat right 10px center;
+  appearance: none;
+  font-size: 14px;
+  color: $text-primary;
+  cursor: pointer;
+  transition: border-color 0.2s;
+
+  &:hover {
+    border-color: $primary-color;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $primary-color;
+  }
+}
+
+// 搜索下拉框
+.search-dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-arrow {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: $text-secondary;
+  pointer-events: none;
+}
+
+.search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: $white;
+  border: 1px solid $border-color;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.dropdown-item {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: $text-primary;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: $row-hover;
+  }
+
+  &.selected {
+    background: rgba($primary-color, 0.1);
+    color: $primary-color;
+  }
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  height: 32px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.btn-primary {
+  background: $primary-color;
+  color: $white;
+  border: 1px solid $primary-color;
+
+  &:hover {
+    background: $primary-hover;
+    border-color: $primary-hover;
+  }
+}
+
+.btn-secondary {
+  background: $white;
+  color: $text-primary;
+  border: 1px solid $border-color;
+
+  &:hover {
+    border-color: #b8bcc4;
+    background: $bg-gray;
+  }
+}
+
+// 表格容器
+.table-container {
+  border: 1px solid $border-color;
+  border-radius: 4px;
+  background: $white;
+  overflow: hidden;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+// 数据表格
+.data-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+
+    tr {
+      background: $bg-gray;
+    }
+
+    th {
+      padding: 12px 14px;
+      text-align: left;
+      font-weight: 500;
+      color: $text-secondary;
+      border-bottom: 1px solid $border-color;
+      white-space: nowrap;
+      user-select: none;
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid $border-color;
+      transition: background 0.15s;
+
+      &:hover {
+        background: $row-hover;
+      }
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+
+    td {
+      padding: 12px 14px;
+      color: $text-primary;
+      vertical-align: top;
+    }
+  }
+}
+
+// 列宽
+.col-database {
+  width: 140px;
+  min-width: 140px;
+}
+
+.col-tablename {
+  width: 200px;
+  min-width: 200px;
+}
+
+.col-risk-type {
+  width: 140px;
+  min-width: 140px;
+}
+
+.col-reason {
+  min-width: 400px;
+}
+
+// 风险类型标签
+.risk-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+
+  &.risk-error {
+    background: rgba($risk-error, 0.1);
+    color: $risk-error;
+  }
+
+  &.risk-warning {
+    background: rgba($risk-warning, 0.1);
+    color: darken($risk-warning, 10%);
+  }
+
+  &.risk-info {
+    background: rgba($risk-info, 0.1);
+    color: $risk-info;
+  }
+}
+
+.empty-cell {
+  text-align: center !important;
+  color: $text-secondary;
+  padding: 40px 14px !important;
+}
+
+// 分页
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-top: 1px solid $border-color;
+  background: $bg-gray;
+}
+
+.pagination-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pagination-total {
+  font-size: 13px;
+  color: $text-secondary;
+}
+
+.page-size-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: $text-secondary;
+
+  select {
+    height: 28px;
+    padding: 0 24px 0 8px;
+    border: 1px solid $border-color;
+    border-radius: 3px;
+    background: $white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23575d6c' d='M2 3.5l3 3 3-3'/%3E%3C/svg%3E") no-repeat right 6px center;
+    appearance: none;
+    font-size: 13px;
+    color: $text-primary;
+    cursor: pointer;
+
+    &:focus {
+      outline: none;
+      border-color: $primary-color;
+    }
+  }
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pagination-btn {
+  min-width: 32px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid $border-color;
+  border-radius: 3px;
+  background: $white;
+  font-size: 13px;
+  color: $text-primary;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    border-color: $primary-color;
+    color: $primary-color;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+    background: $bg-gray;
+  }
+
+  &.active {
+    background: $primary-color;
+    border-color: $primary-color;
+    color: $white;
+  }
+}
+
+.pagination-num {
+  min-width: 28px;
+  padding: 0 6px;
+}
+
+.pagination-ellipsis {
+  padding: 0 6px;
+  color: $text-secondary;
+}
+
+// 响应式
+@media (max-width: 768px) {
+  .page-container {
+    padding: 16px;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filter-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .pagination {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .pagination-left {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+

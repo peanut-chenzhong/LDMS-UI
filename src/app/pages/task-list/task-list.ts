@@ -69,10 +69,18 @@ export class TaskListComponent implements OnInit {
   analysisOptions = [
     { key: 'compaction', label: 'compaction分析', checked: false },
     { key: 'clean', label: 'clean分析', checked: false },
-    { key: 'archive', label: 'archive分析', checked: false },
-    { key: 'bucket', label: '桶变更分析', checked: false },
-    { key: 'partition', label: '分区存储分析', checked: false }
+    { key: 'archive', label: 'archive分析', checked: false }
   ];
+  
+  // 分区存储分析选项
+  partitionAnalysisEnabled = false;
+  partitionAnalysisMode = 'recent_compaction';  // 'full_scan' | 'recent_compaction' | 'specified_commit'
+  partitionAnalysisModes = [
+    { value: 'recent_compaction', label: '从最近compaction扫描' },
+    { value: 'full_scan', label: '全表扫描' },
+    { value: 'specified_commit', label: '从指定commit时间扫描' }
+  ];
+  specifiedCommitTime = '';  // yyyyMMddHHmmssSSS 格式
   selectedDatabase = '';
   availableTables: string[] = [];
   selectedTables: string[] = [];
@@ -154,7 +162,7 @@ export class TaskListComponent implements OnInit {
     const databases = ['hive_prod', 'hive_test', 'spark_warehouse', 'data_lake', 'analytics_db'];
     const tableNames = ['user_info', 'order_detail', 'product_catalog', 'transaction_log', 'session_data', 'event_tracking'];
     const statuses: AnalysisTask['status'][] = ['pending', 'running', 'completed', 'failed', 'stopped'];
-    const allAnalysisTypes = ['compaction分析', 'clean分析', 'archive分析', '桶变更分析', '分区存储分析'];
+    const allAnalysisTypes = ['compaction分析', 'clean分析', 'archive分析', '分区存储分析(从最近compaction扫描)', '分区存储分析(全表扫描)'];
 
     for (let i = 1; i <= 68; i++) {
       const status = statuses[Math.floor(Math.random() * statuses.length)];
@@ -477,22 +485,20 @@ export class TaskListComponent implements OnInit {
         '存在过期的archive日志，可以安全删除',
         'Archive保留策略建议调整为7天',
         '最近archive清理时间: 3天前'
-      ],
-      '桶变更分析': [
-        '桶配置正常，数据分布均匀',
-        '发现桶数据倾斜，最大桶是最小桶的5倍',
-        '桶数量建议从16调整为32以优化性能',
-        '桶索引需要重建，存在过期条目',
-        '桶配置与数据量匹配，无需调整'
-      ],
-      '分区存储分析': [
+      ]
+    };
+
+    // 处理分区存储分析（两种模式）
+    if (analysisType.includes('分区存储分析')) {
+      const partitionResults = [
         '分区存储正常，数据分布均匀',
         '分区数据分布不均，最大分区是最小分区的10倍',
         '存在空分区，建议清理以减少元数据开销',
         '分区数过多(>1000)，建议合并历史分区',
         '分区策略合理，存储利用率85%'
-      ]
-    };
+      ];
+      return partitionResults[Math.floor(Math.random() * partitionResults.length)];
+    }
 
     const results = resultsByType[analysisType] || ['分析完成，无异常发现'];
     return results[Math.floor(Math.random() * results.length)];
@@ -557,6 +563,9 @@ export class TaskListComponent implements OnInit {
   // 重置新增表单
   resetCreateForm(): void {
     this.analysisOptions.forEach(opt => opt.checked = false);
+    this.partitionAnalysisEnabled = false;
+    this.partitionAnalysisMode = 'recent_compaction';
+    this.specifiedCommitTime = '';
     this.selectedDatabase = '';
     this.availableTables = [];
     this.selectedTables = [];
@@ -607,7 +616,16 @@ export class TaskListComponent implements OnInit {
 
   // 获取选中的分析项
   getSelectedAnalysis(): string[] {
-    return this.analysisOptions.filter(opt => opt.checked).map(opt => opt.label);
+    const selected = this.analysisOptions.filter(opt => opt.checked).map(opt => opt.label);
+    if (this.partitionAnalysisEnabled) {
+      if (this.partitionAnalysisMode === 'specified_commit') {
+        selected.push(`分区存储分析(从指定commit时间扫描: ${this.specifiedCommitTime})`);
+      } else {
+        const modeLabel = this.partitionAnalysisModes.find(m => m.value === this.partitionAnalysisMode)?.label || '';
+        selected.push(`分区存储分析(${modeLabel})`);
+      }
+    }
+    return selected;
   }
 
   // 提交创建任务
@@ -617,6 +635,18 @@ export class TaskListComponent implements OnInit {
     if (selectedAnalysis.length === 0) {
       alert('请至少选择一个分析项');
       return;
+    }
+
+    // 验证指定commit时间
+    if (this.partitionAnalysisEnabled && this.partitionAnalysisMode === 'specified_commit') {
+      if (!this.specifiedCommitTime) {
+        alert('请输入commit时间戳');
+        return;
+      }
+      if (!/^\d{17}$/.test(this.specifiedCommitTime)) {
+        alert('commit时间戳格式错误，请输入17位数字（yyyyMMddHHmmssSSS）');
+        return;
+      }
     }
     
     if (!this.selectedDatabase) {
