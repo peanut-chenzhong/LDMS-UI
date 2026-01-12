@@ -7,6 +7,7 @@ interface RiskItem {
   database: string;
   tablename: string;
   riskType: string;
+  alertTime: string;
   reason: string;
 }
 
@@ -31,6 +32,10 @@ export class RiskListComponent implements OnInit {
   searchDatabase = '';
   searchTableName = '';
   searchRiskType = '';
+
+  // 排序
+  sortField: string = '';
+  sortDirection: 'asc' | 'desc' = 'asc';
 
   // 下拉选项
   allDatabases: string[] = [];
@@ -161,11 +166,15 @@ export class RiskListComponent implements OnInit {
       const reasonList = reasons[riskInfo.type];
       const reason = reasonList[Math.floor(Math.random() * reasonList.length)];
 
+      // 生成预警时间（过去30天内的随机时间）
+      const alertTime = this.randomDateTime(30);
+
       this.allRisks.push({
         id: `risk_${String(i).padStart(4, '0')}`,
         database: db,
         tablename: `${table}_${String(Math.floor(Math.random() * 100)).padStart(3, '0')}`,
         riskType: riskInfo.label,
+        alertTime,
         reason
       });
     }
@@ -196,6 +205,12 @@ export class RiskListComponent implements OnInit {
         risk.riskType === this.riskTypeOptions.find(o => o.value === this.searchRiskType)?.label;
       return dbMatch && tableMatch && typeMatch;
     });
+    
+    // 如果有排序，应用排序
+    if (this.sortField) {
+      this.applySort();
+    }
+    
     this.currentPage = 1;
   }
 
@@ -209,10 +224,45 @@ export class RiskListComponent implements OnInit {
     this.searchDatabase = '';
     this.searchTableName = '';
     this.searchRiskType = '';
+    this.sortField = '';
+    this.sortDirection = 'asc';
     this.filteredDatabases = [...this.allDatabases];
     this.filteredTableNames = [...this.allTableNames];
     this.filteredRisks = [...this.allRisks];
     this.currentPage = 1;
+  }
+
+  // 排序
+  onSort(field: string): void {
+    if (this.sortField === field) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortField = field;
+      this.sortDirection = 'asc';
+    }
+    this.applySort();
+  }
+
+  applySort(): void {
+    this.filteredRisks.sort((a, b) => {
+      const aVal = (a as any)[this.sortField];
+      const bVal = (b as any)[this.sortField];
+      const modifier = this.sortDirection === 'asc' ? 1 : -1;
+      
+      // 日期时间排序（格式：YYYY-MM-DD HH:mm:ss）
+      if (this.sortField === 'alertTime') {
+        const aDate = new Date(aVal).getTime();
+        const bDate = new Date(bVal).getTime();
+        return (aDate - bDate) * modifier;
+      }
+      
+      // 字符串排序
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        return aVal.localeCompare(bVal) * modifier;
+      }
+      
+      return 0;
+    });
   }
 
   // Database 下拉搜索
@@ -278,6 +328,13 @@ export class RiskListComponent implements OnInit {
 
   onPageSizeChange(): void {
     this.currentPage = 1;
+  }
+
+  // 生成随机日期时间（过去N天内）
+  randomDateTime(daysBack: number): string {
+    const now = new Date();
+    const past = new Date(now.getTime() - Math.random() * daysBack * 24 * 60 * 60 * 1000);
+    return past.toISOString().slice(0, 19).replace('T', ' ');
   }
 
   // 获取风险类型的样式类

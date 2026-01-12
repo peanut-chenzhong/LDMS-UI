@@ -84,6 +84,19 @@
             <th class="col-database">数据库名</th>
             <th class="col-tablename">表名</th>
             <th class="col-risk-type">风险类型</th>
+            <th 
+              class="col-alert-time sortable" 
+              (click)="onSort('alertTime')"
+              [class.sort-active]="sortField === 'alertTime'">
+              预警时间
+              <span class="sort-icon" [class.active]="sortField === 'alertTime'">
+                @if (sortField === 'alertTime') {
+                  {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                } @else {
+                  ↕
+                }
+              </span>
+            </th>
             <th class="col-reason">原因</th>
           </tr>
         </thead>
@@ -97,11 +110,12 @@
                   {{ risk.riskType }}
                 </span>
               </td>
+              <td class="col-alert-time">{{ risk.alertTime }}</td>
               <td class="col-reason">{{ risk.reason }}</td>
             </tr>
           } @empty {
             <tr>
-              <td colspan="4" class="empty-cell">暂无风险数据</td>
+              <td colspan="5" class="empty-cell">暂无风险数据</td>
             </tr>
           }
         </tbody>

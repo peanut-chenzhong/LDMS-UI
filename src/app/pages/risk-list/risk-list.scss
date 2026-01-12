@@ -251,6 +251,20 @@ $risk-info: #0070cc;
       border-bottom: 1px solid $border-color;
       white-space: nowrap;
       user-select: none;
+
+      &.sortable {
+        cursor: pointer;
+        transition: all 0.2s;
+        
+        &:hover {
+          color: $primary-color;
+          background: darken($bg-gray, 2%);
+        }
+      }
+
+      &.sort-active {
+        color: $primary-color;
+      }
     }
   }
 
@@ -290,6 +304,26 @@ $risk-info: #0070cc;
 .col-risk-type {
   width: 140px;
   min-width: 140px;
+}
+
+.col-alert-time {
+  width: 160px;
+  min-width: 160px;
+  white-space: nowrap;
+  position: relative;
+}
+
+.sort-icon {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 12px;
+  color: #b8bcc4;
+  vertical-align: middle;
+  transition: color 0.2s;
+
+  &.active {
+    color: $primary-color;
+  }
 }
 
 .col-reason {
@@ -444,4 +478,5 @@ $risk-info: #0070cc;
     gap: 8px;
   }
 }
+
 
