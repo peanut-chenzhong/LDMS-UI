@@ -10,21 +10,55 @@
     <div class="filter-controls">
       <div class="filter-item">
         <label class="filter-label">Database</label>
-        <select class="filter-select" [(ngModel)]="filters.database">
-          <option value="">All Databases</option>
-          @for (db of databases; track db) {
-            <option [value]="db">{{ db }}</option>
+        <div class="search-dropdown-container">
+          <input 
+            type="text" 
+            class="filter-input filter-input-dropdown" 
+            [(ngModel)]="filters.database"
+            (input)="onDatabaseInputChange()"
+            (focus)="onDatabaseFocus()"
+            (keyup.enter)="onSearch()"
+            placeholder="选择或输入database">
+          <span class="dropdown-arrow">▼</span>
+          @if (showDatabaseDropdown && filteredDatabases.length > 0) {
+            <div class="search-dropdown">
+              @for (db of filteredDatabases; track db) {
+                <div 
+                  class="dropdown-item" 
+                  [class.selected]="filters.database === db"
+                  (click)="selectDatabase(db)">
+                  {{ db }}
+                </div>
+              }
+            </div>
           }
-        </select>
+        </div>
       </div>
       <div class="filter-item">
         <label class="filter-label">TableName</label>
-        <select class="filter-select" [(ngModel)]="filters.tableName">
-          <option value="">All Tables</option>
-          @for (table of tableNames; track table) {
-            <option [value]="table">{{ table }}</option>
+        <div class="search-dropdown-container">
+          <input 
+            type="text" 
+            class="filter-input filter-input-dropdown" 
+            [(ngModel)]="filters.tableName"
+            (input)="onTableNameInputChange()"
+            (focus)="onTableNameFocus()"
+            (keyup.enter)="onSearch()"
+            placeholder="选择或输入表名">
+          <span class="dropdown-arrow">▼</span>
+          @if (showTableNameDropdown && filteredTableNames.length > 0) {
+            <div class="search-dropdown">
+              @for (table of filteredTableNames; track table) {
+                <div 
+                  class="dropdown-item"
+                  [class.selected]="filters.tableName === table"
+                  (click)="selectTableName(table)">
+                  {{ table }}
+                </div>
+              }
+            </div>
           }
-        </select>
+        </div>
       </div>
     </div>
     <div class="filter-actions">

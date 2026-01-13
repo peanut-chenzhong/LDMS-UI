@@ -67,18 +67,27 @@ $shadow-light: 0 1px 4px rgba(0, 0, 0, 0.08);
   font-weight: 500;
 }
 
-.filter-select {
-  min-width: 180px;
+.filter-input {
+  min-width: 160px;
+  width: 100%;
   height: 32px;
-  padding: 0 32px 0 12px;
-  border: 1px solid $border-color;
+  padding: 0 28px 0 12px;
+  border: 1px solid $border-color !important;
   border-radius: 4px;
-  background: $white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23575d6c' d='M2.5 4.5l3.5 3.5 3.5-3.5'/%3E%3C/svg%3E") no-repeat right 10px center;
-  appearance: none;
   font-size: 14px;
-  color: $text-primary;
-  cursor: pointer;
+  color: $text-primary !important;
+  background: $white !important;
   transition: border-color 0.2s;
+  box-sizing: border-box;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: relative;
+  z-index: 1;
+
+  &::placeholder {
+    color: #b8bcc4;
+  }
 
   &:hover {
     border-color: $primary-color;
@@ -88,6 +97,60 @@ $shadow-light: 0 1px 4px rgba(0, 0, 0, 0.08);
     outline: none;
     border-color: $primary-color;
     box-shadow: 0 0 0 2px rgba(0, 112, 204, 0.1);
+  }
+}
+
+.filter-input-dropdown {
+  padding-right: 28px;
+}
+
+// 搜索下拉框容器
+.search-dropdown-container {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  min-width: 160px;
+}
+
+.dropdown-arrow {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: $text-secondary;
+  pointer-events: none;
+}
+
+.search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: $white;
+  border: 1px solid $border-color;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.dropdown-item {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: $text-primary;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: $row-hover;
+  }
+
+  &.selected {
+    background: rgba($primary-color, 0.1);
+    color: $primary-color;
   }
 }
 

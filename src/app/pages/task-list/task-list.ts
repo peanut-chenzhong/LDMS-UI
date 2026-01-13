@@ -427,6 +427,41 @@ export class TaskListComponent implements OnInit {
     // 创建工作簿
     const workbook = XLSX.utils.book_new();
 
+    // 第一个 sheet 固定为 risk list，显示数据倾斜和log文件过大两种风险异常
+    const riskListData = task.tables.map(fullTableName => {
+      const [database, tablename] = fullTableName.split('.');
+      return {
+        database,
+        tablename,
+        '风险类型': '数据倾斜',
+        '分析结果': this.generateRiskAnalysisResult('数据倾斜')
+      };
+    }).concat(
+      task.tables.map(fullTableName => {
+        const [database, tablename] = fullTableName.split('.');
+        return {
+          database,
+          tablename,
+          '风险类型': 'log文件过大',
+          '分析结果': this.generateRiskAnalysisResult('log文件过大')
+        };
+      })
+    );
+
+    // 创建 risk list 工作表
+    const riskListWorksheet = XLSX.utils.json_to_sheet(riskListData);
+    
+    // 设置列宽
+    riskListWorksheet['!cols'] = [
+      { wch: 20 },  // database
+      { wch: 30 },  // tablename
+      { wch: 18 },  // 风险类型
+      { wch: 60 }   // 分析结果
+    ];
+
+    // 将 risk list 作为第一个 sheet
+    XLSX.utils.book_append_sheet(workbook, riskListWorksheet, 'risk list');
+
     // 为每个分析项创建一个 sheet
     task.analysisTypes.forEach(analysisType => {
       const reportData = task.tables.map(fullTableName => {
@@ -460,6 +495,29 @@ export class TaskListComponent implements OnInit {
     XLSX.writeFile(workbook, fileName);
     
     console.log('下载报告:', task.taskName, '分析项:', task.analysisTypes);
+  }
+
+  // 生成风险异常分析结果
+  generateRiskAnalysisResult(riskType: string): string {
+    const riskResults: Record<string, string[]> = {
+      '数据倾斜': [
+        '最大分区大小：50GB，最小分区：500MB，倾斜比：100:1',
+        '热点分区 dt=2024-01-08 数据量是平均值的20倍',
+        '数据分布不均导致查询性能下降，最大bucket：12GB，最小bucket：100MB',
+        '分区数据分布不均，最大分区是最小分区的10倍',
+        '存在空分区，建议清理以减少元数据开销'
+      ],
+      'log文件过大': [
+        'Archive日志大小：15GB，超过建议阈值1GB',
+        '单个log文件大小：2.3GB，超过建议阈值128MB',
+        '日志文件数量过多，当前数量：567个，建议执行archive操作',
+        'Log文件累积过多，建议执行日志归档清理',
+        '单个log文件超过2GB，影响读取性能，建议拆分'
+      ]
+    };
+
+    const results = riskResults[riskType] || ['分析完成，无异常发现'];
+    return results[Math.floor(Math.random() * results.length)];
   }
 
   // 根据分析类型生成模拟分析结果

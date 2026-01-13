@@ -53,12 +53,10 @@ export class RiskListComponent implements OnInit {
     { value: '', label: '全部类型' },
     { value: 'metadata_bloat', label: '元数据膨胀' },
     { value: 'schema_bloat', label: 'schema膨胀' },
-    { value: 'compaction_backlog', label: 'compaction挤压' },
-    { value: 'data_skew', label: '数据倾斜' },
-    { value: 'log_oversized', label: 'log文件过大' },
-    { value: 'compaction_failed', label: 'compaction失败' },
-    { value: 'clean_failed', label: 'clean失败' },
-    { value: 'archive_failed', label: 'archive失败' }
+    { value: 'compaction_backlog', label: 'compaction积压' },
+    { value: 'compaction_abnormal', label: 'compaction异常' },
+    { value: 'clean_abnormal', label: 'clean异常' },
+    { value: 'archive_abnormal', label: 'archive异常' }
   ];
 
   get totalPages(): number {
@@ -108,12 +106,10 @@ export class RiskListComponent implements OnInit {
     const riskTypes = [
       { type: 'metadata_bloat', label: '元数据膨胀' },
       { type: 'schema_bloat', label: 'schema膨胀' },
-      { type: 'compaction_backlog', label: 'compaction挤压' },
-      { type: 'data_skew', label: '数据倾斜' },
-      { type: 'log_oversized', label: 'log文件过大' },
-      { type: 'compaction_failed', label: 'compaction失败' },
-      { type: 'clean_failed', label: 'clean失败' },
-      { type: 'archive_failed', label: 'archive失败' }
+      { type: 'compaction_backlog', label: 'compaction积压' },
+      { type: 'compaction_abnormal', label: 'compaction异常' },
+      { type: 'clean_abnormal', label: 'clean异常' },
+      { type: 'archive_abnormal', label: 'archive异常' }
     ];
 
     const reasons: Record<string, string[]> = {
@@ -132,30 +128,23 @@ export class RiskListComponent implements OnInit {
         '文件版本数过多，当前版本数：128，建议阈值：50',
         'Compaction调度滞后，待处理log文件数：234个，建议增加compaction频率'
       ],
-      'data_skew': [
-        '最大分区大小：50GB，最小分区：500MB，倾斜比：100:1',
-        '热点分区 dt=2024-01-08 数据量是平均值的20倍',
-        '数据分布不均导致查询性能下降，最大bucket：12GB，最小bucket：100MB'
+      'compaction_abnormal': [
+        'Compaction任务执行异常，错误：OutOfMemoryError，建议增加executor内存',
+        '最近3次compaction连续异常，异常原因：数据文件损坏',
+        'Compaction执行超时，已运行：4小时，超过阈值：2小时',
+        'Compaction过程中出现数据不一致，建议检查文件完整性'
       ],
-      'log_oversized': [
-        'Archive日志大小：15GB，超过建议阈值1GB',
-        '单个log文件大小：2.3GB，超过建议阈值128MB',
-        '日志文件数量过多，当前数量：567个，建议执行archive操作'
+      'clean_abnormal': [
+        'Clean任务执行异常，错误：无法删除文件，权限不足',
+        '清理任务异常，存在被引用的历史版本无法删除',
+        'Clean操作异常中断，部分文件未能清理，建议手动检查',
+        'Clean过程中检测到文件锁定，建议检查并发访问'
       ],
-      'compaction_failed': [
-        'Compaction任务失败，错误：OutOfMemoryError，建议增加executor内存',
-        '最近3次compaction连续失败，失败原因：数据文件损坏',
-        'Compaction执行超时，已运行：4小时，超过阈值：2小时'
-      ],
-      'clean_failed': [
-        'Clean任务执行失败，错误：无法删除文件，权限不足',
-        '清理任务失败，存在被引用的历史版本无法删除',
-        'Clean操作异常中断，部分文件未能清理，建议手动检查'
-      ],
-      'archive_failed': [
-        'Archive任务失败，目标存储空间不足',
+      'archive_abnormal': [
+        'Archive任务执行异常，目标存储空间不足',
         '归档执行超时，大文件传输失败，建议分批执行',
-        'Archive操作失败，错误：网络连接中断，建议重试'
+        'Archive操作异常，错误：网络连接中断，建议重试',
+        'Archive过程中文件校验失败，建议检查源文件完整性'
       ]
     };
 
@@ -342,13 +331,11 @@ export class RiskListComponent implements OnInit {
     const classMap: Record<string, string> = {
       '元数据膨胀': 'risk-warning',
       'schema膨胀': 'risk-warning',
-      'compaction挤压': 'risk-warning',
-      '数据倾斜': 'risk-info',
-      'log文件过大': 'risk-warning',
-      'compaction失败': 'risk-error',
-      'clean失败': 'risk-error',
-      'archive失败': 'risk-error'
+      'compaction积压': 'risk-warning',
+      'compaction异常': 'risk-error',
+      'clean异常': 'risk-error',
+      'archive异常': 'risk-error'
     };
-    return classMap[riskType] || 'risk-info';
+    return classMap[riskType] || 'risk-warning';
   }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BaseChartDirective } from 'ng2-charts';
@@ -35,7 +35,6 @@ interface HistoryData {
   date: string;
   tablesize: number;
   filenumber: number;
-  tablepartitions: number;
   uncommittedCount: number;
   activeCommitCount: number;
   rollbackCount: number;
@@ -56,9 +55,15 @@ export class TableSearchComponent implements OnInit {
     tableName: ''
   };
 
-  // 下拉选项
-  databases = ['hive_prod', 'hive_test', 'spark_warehouse', 'data_lake', 'analytics_db'];
-  tableNames = ['user_info', 'order_detail', 'product_catalog', 'transaction_log', 'session_data', 'event_tracking', 'inventory', 'customer_profile'];
+  // 下拉选项（从实际数据中提取）
+  allDatabases: string[] = [];
+  allTableNames: string[] = [];
+  filteredDatabases: string[] = [];
+  filteredTableNames: string[] = [];
+
+  // 下拉框显示状态
+  showDatabaseDropdown = false;
+  showTableNameDropdown = false;
 
   // 固定列（不可拖拽）
   fixedColumns: ColumnDef[] = [
@@ -73,7 +78,6 @@ export class TableSearchComponent implements OnInit {
     { key: 'tablesize', label: 'tablesize', sortable: true },
     { key: 'filenumber', label: 'filenumber', sortable: true },
     { key: 'tableindex', label: 'tableindex', sortable: true },
-    { key: 'tablepartitions', label: 'tablepartitions', sortable: true },
     { key: 'lastcommittime', label: 'lastcommittime', sortable: true },
     { key: 'lastcompletecompactiontime', label: 'lastcompletecompactiontime', sortable: true },
     { key: 'lastcleantime', label: 'lastcleantime', sortable: true },
@@ -202,14 +206,34 @@ export class TableSearchComponent implements OnInit {
   ngOnInit(): void {
     this.generateMockData();
     this.filteredData = [...this.allData];
+    this.extractSearchOptions();
+  }
+
+  // 从数据中提取搜索选项
+  extractSearchOptions(): void {
+    const databases = new Set<string>();
+    const tableNames = new Set<string>();
+
+    this.allData.forEach(row => {
+      databases.add(row.database);
+      tableNames.add(row.tablename);
+    });
+
+    this.allDatabases = Array.from(databases).sort();
+    this.allTableNames = Array.from(tableNames).sort();
+    this.filteredDatabases = [...this.allDatabases];
+    this.filteredTableNames = [...this.allTableNames];
   }
 
   generateMockData(): void {
     const types = ['COW', 'MOR', 'MOW'];
+    // 用于生成模拟数据的固定列表
+    const databases = ['hive_prod', 'hive_test', 'spark_warehouse', 'data_lake', 'analytics_db'];
+    const tableNames = ['user_info', 'order_detail', 'product_catalog', 'transaction_log', 'session_data', 'event_tracking', 'inventory', 'customer_profile'];
     
     for (let i = 1; i <= 56; i++) {
-      const dbIndex = Math.floor(Math.random() * this.databases.length);
-      const tableIndex = Math.floor(Math.random() * this.tableNames.length);
+      const dbIndex = Math.floor(Math.random() * databases.length);
+      const tableIndex = Math.floor(Math.random() * tableNames.length);
       
       // 生成 tableindex: BLOOM, SIMPLE 或 BUCKET+数字
       let tableIndexValue: string;
@@ -223,8 +247,8 @@ export class TableSearchComponent implements OnInit {
       }
       
       this.allData.push({
-        database: this.databases[dbIndex],
-        tablename: `${this.tableNames[tableIndex]}_${String(i).padStart(3, '0')}`,
+        database: databases[dbIndex],
+        tablename: `${tableNames[tableIndex]}_${String(i).padStart(3, '0')}`,
         createtime: this.randomDate('2023-01-01', '2024-06-01'),
         tabletype: types[Math.floor(Math.random() * types.length)],
         tablesize: Math.floor(Math.random() * 50000) + 100,
@@ -269,14 +293,18 @@ export class TableSearchComponent implements OnInit {
 
   onSearch(): void {
     this.filteredData = this.allData.filter(row => {
-      const dbMatch = !this.filters.database || row.database === this.filters.database;
-      const tableMatch = !this.filters.tableName || row.tablename.includes(this.filters.tableName);
+      const dbSearch = this.filters.database.toLowerCase().trim();
+      const tableSearch = this.filters.tableName.toLowerCase().trim();
+      const dbMatch = !dbSearch || row.database.toLowerCase().includes(dbSearch);
+      const tableMatch = !tableSearch || row.tablename.toLowerCase().includes(tableSearch);
       return dbMatch && tableMatch;
     });
     this.currentPage = 1;
     if (this.sortField) {
       this.applySort();
     }
+    this.showDatabaseDropdown = false;
+    this.showTableNameDropdown = false;
   }
 
   onReset(): void {
@@ -286,6 +314,66 @@ export class TableSearchComponent implements OnInit {
     this.filteredData = [...this.allData];
     this.currentPage = 1;
     this.selectedRow = null;
+    this.filteredDatabases = [...this.allDatabases];
+    this.filteredTableNames = [...this.allTableNames];
+    this.showDatabaseDropdown = false;
+    this.showTableNameDropdown = false;
+  }
+
+  // Database 下拉搜索
+  onDatabaseInputChange(): void {
+    const keyword = this.filters.database.toLowerCase().trim();
+    if (keyword) {
+      this.filteredDatabases = this.allDatabases.filter(db => 
+        db.toLowerCase().includes(keyword)
+      );
+    } else {
+      this.filteredDatabases = [...this.allDatabases];
+    }
+    this.showDatabaseDropdown = true;
+  }
+
+  onDatabaseFocus(): void {
+    this.showDatabaseDropdown = true;
+    this.showTableNameDropdown = false;
+  }
+
+  selectDatabase(db: string): void {
+    this.filters.database = db;
+    this.showDatabaseDropdown = false;
+  }
+
+  // TableName 下拉搜索
+  onTableNameInputChange(): void {
+    const keyword = this.filters.tableName.toLowerCase().trim();
+    if (keyword) {
+      this.filteredTableNames = this.allTableNames.filter(table => 
+        table.toLowerCase().includes(keyword)
+      );
+    } else {
+      this.filteredTableNames = [...this.allTableNames];
+    }
+    this.showTableNameDropdown = true;
+  }
+
+  onTableNameFocus(): void {
+    this.showTableNameDropdown = true;
+    this.showDatabaseDropdown = false;
+  }
+
+  selectTableName(table: string): void {
+    this.filters.tableName = table;
+    this.showTableNameDropdown = false;
+  }
+
+  // 点击外部关闭下拉框
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event): void {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.search-dropdown-container')) {
+      this.showDatabaseDropdown = false;
+      this.showTableNameDropdown = false;
+    }
   }
 
   onSort(field: string): void {
@@ -382,7 +470,6 @@ export class TableSearchComponent implements OnInit {
     // 基础值
     let tablesize = row.tablesize as number;
     let filenumber = row.filenumber as number;
-    let tablepartitions = row.tablepartitions as number;
     let schemaversion = row.schemaversion as number;
     
     // 生成30天数据（从30天前到今天）
@@ -397,7 +484,6 @@ export class TableSearchComponent implements OnInit {
         date: `${date.getMonth() + 1}/${date.getDate()}`,
         tablesize: Math.round(tablesize * (0.7 + i * 0.01 + dayVariation)),
         filenumber: Math.round(filenumber * (0.8 + i * 0.007 + dayVariation * 0.5)),
-        tablepartitions: Math.round(tablepartitions * (0.9 + i * 0.003 + Math.random() * 0.02)),
         uncommittedCount: Math.floor(Math.random() * 20) + Math.floor(Math.sin(i * 0.5) * 5) + 5,
         activeCommitCount: Math.floor(Math.random() * 30) + Math.floor(Math.cos(i * 0.4) * 10) + 10,
         rollbackCount: Math.floor(Math.random() * 10) + Math.floor(Math.abs(Math.sin(i * 0.6)) * 5),
@@ -428,16 +514,6 @@ export class TableSearchComponent implements OnInit {
           data: this.historyData.map(d => d.filenumber),
           borderColor: '#00b386',
           backgroundColor: 'rgba(0, 179, 134, 0.1)',
-          tension: 0.3,
-          fill: false,
-          pointRadius: 2,
-          pointHoverRadius: 5
-        },
-        {
-          label: '分区数',
-          data: this.historyData.map(d => d.tablepartitions),
-          borderColor: '#f5a623',
-          backgroundColor: 'rgba(245, 166, 35, 0.1)',
           tension: 0.3,
           fill: false,
           pointRadius: 2,
