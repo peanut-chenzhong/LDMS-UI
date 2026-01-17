@@ -183,13 +183,20 @@
                     (click)="canViewReport(task) && viewReport(task)">
                     查看报告
                   </button>
-                  <button 
-                    class="btn-action btn-stop" 
-                    [class.disabled]="!canStop(task)"
-                    [disabled]="!canStop(task)"
-                    (click)="canStop(task) && stopTask(task)">
-                    停止
-                  </button>
+                  @if (canStart(task)) {
+                    <button 
+                      class="btn-action btn-start" 
+                      (click)="startTask(task)">
+                      启动
+                    </button>
+                  }
+                  @if (canStop(task)) {
+                    <button 
+                      class="btn-action btn-stop" 
+                      (click)="stopTask(task)">
+                      停止
+                    </button>
+                  }
                   <button 
                     class="btn-action btn-delete" 
                     [class.disabled]="!canDelete(task)"
@@ -203,34 +210,49 @@
             @if (isTaskExpanded(task)) {
               <tr class="task-detail-row">
                 <td colspan="8" class="task-detail-cell">
-                  <div class="task-detail-content">
-                    <div class="detail-item">
-                      <span class="detail-label">任务 AppID:</span>
-                      <span class="detail-value">{{ task.appId }}</span>
+                  <div class="execution-list">
+                    <div class="execution-list-header">
+                      <span class="execution-list-title">执行历史记录</span>
                     </div>
-                    <div class="detail-item">
-                      <span class="detail-label">开始时间:</span>
-                      <span class="detail-value">{{ task.startTime }}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">完成时间:</span>
-                      <span class="detail-value">{{ task.endTime }}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">状态:</span>
-                      <span class="status-badge" [ngClass]="getStatusClass(task.status)">
-                        {{ getStatusText(task.status) }}
-                      </span>
-                    </div>
-                    <div class="detail-item detail-actions">
-                      <button 
-                        class="btn-action btn-view" 
-                        [class.disabled]="!canViewReport(task)"
-                        [disabled]="!canViewReport(task)"
-                        (click)="canViewReport(task) && viewReport(task)">
-                        查看报告
-                      </button>
-                    </div>
+                    @if (task.executions && task.executions.length > 0) {
+                      @for (execution of task.executions; track execution.id) {
+                        <div class="execution-item">
+                          <div class="execution-details">
+                            <div class="execution-detail-row">
+                              <div class="execution-detail-item">
+                                <span class="execution-label">任务 AppID:</span>
+                                <span class="execution-value">{{ execution.appId }}</span>
+                              </div>
+                              <div class="execution-detail-item">
+                                <span class="execution-label">开始时间:</span>
+                                <span class="execution-value">{{ execution.startTime }}</span>
+                              </div>
+                              <div class="execution-detail-item">
+                                <span class="execution-label">完成时间:</span>
+                                <span class="execution-value">{{ execution.endTime }}</span>
+                              </div>
+                              <div class="execution-detail-item">
+                                <span class="execution-label">状态:</span>
+                                <span class="status-badge" [ngClass]="getStatusClass(execution.status)">
+                                  {{ getStatusText(execution.status) }}
+                                </span>
+                              </div>
+                              <div class="execution-detail-item execution-actions">
+                                @if (execution.status === 'completed') {
+                                  <button 
+                                    class="btn-action btn-view" 
+                                    (click)="viewReportForExecution(task, execution)">
+                                    查看报告
+                                  </button>
+                                }
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      }
+                    } @else {
+                      <div class="no-executions">暂无执行记录</div>
+                    }
                   </div>
                 </td>
               </tr>

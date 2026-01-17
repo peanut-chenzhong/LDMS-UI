@@ -352,36 +352,71 @@ $status-stopped: #f5a623;
   }
 }
 
-// 任务详情内容
-.task-detail-content {
+// 执行历史记录列表
+.execution-list {
+  padding: 16px 20px;
+}
+
+.execution-list-header {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid $border-color;
+}
+
+.execution-list-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: $text-primary;
+}
+
+.execution-item {
+  padding: 12px 0;
+  border-bottom: 1px solid rgba($border-color, 0.5);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.execution-details {
+  width: 100%;
+}
+
+.execution-detail-row {
   display: flex;
   align-items: center;
   gap: 24px;
-  padding: 16px 20px;
   flex-wrap: wrap;
 }
 
-.detail-item {
+.execution-detail-item {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
 
-  .detail-label {
+  .execution-label {
     color: $text-secondary;
     font-weight: 500;
     white-space: nowrap;
   }
 
-  .detail-value {
+  .execution-value {
     color: $text-primary;
     font-family: 'Consolas', 'Monaco', monospace;
   }
 
-  &.detail-actions {
+  &.execution-actions {
     margin-left: auto;
     gap: 8px;
   }
+}
+
+.no-executions {
+  padding: 20px;
+  text-align: center;
+  color: $text-secondary;
+  font-size: 13px;
 }
 
 // 列宽
@@ -554,6 +589,15 @@ $status-stopped: #f5a623;
 
   &:hover {
     background: rgba($primary-color, 0.05);
+  }
+}
+
+.btn-start {
+  color: $status-completed;
+  border-color: $status-completed;
+
+  &:hover {
+    background: rgba($status-completed, 0.05);
   }
 }
 

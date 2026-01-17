@@ -3,6 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import * as XLSX from 'xlsx';
 
+interface TaskExecution {
+  id: string;
+  startTime: string;
+  endTime: string;
+  appId: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'stopped';
+}
+
 interface AnalysisTask {
   id: string;
   taskName: string;
@@ -13,6 +21,7 @@ interface AnalysisTask {
   endTime: string;
   appId: string;
   analysisTypes: string[];  // 分析项列表
+  executions: TaskExecution[];  // 执行历史记录
 }
 
 @Component({
@@ -201,16 +210,51 @@ export class TaskListComponent implements OnInit {
       const taskSuffix = String(i).padStart(3, '0');
       const friendlyTaskName = `${taskPrefix}_${taskSuffix}`;
 
+      // 生成执行历史记录（1-5条）
+      const executionCount = Math.floor(Math.random() * 5) + 1;
+      const executions: TaskExecution[] = [];
+      let latestExecution: TaskExecution | null = null;
+
+      for (let j = 0; j < executionCount; j++) {
+        const execStatus: ('pending' | 'running' | 'completed' | 'failed' | 'stopped') = 
+          j === executionCount - 1 ? status : 
+          (Math.random() > 0.3 ? 'completed' : (Math.random() > 0.5 ? 'failed' : 'stopped'));
+        
+        const execStartTime = j === 0 ? startTime : this.addMinutes(createTime, -Math.floor(Math.random() * 10080)); // 最多7天前
+        const execEndTime = execStatus === 'pending' || execStatus === 'running' ? '-' : 
+          this.addMinutes(execStartTime, Math.floor(Math.random() * 480) + 30); // 30分钟到8小时
+        
+        const execAppId = execStatus !== 'pending' ? 
+          `application_${Date.now() - Math.floor(Math.random() * 10000000) - j * 1000000}_${String(Math.floor(Math.random() * 9999)).padStart(4, '0')}` : '-';
+        
+        const execution: TaskExecution = {
+          id: `exec_${String(i).padStart(4, '0')}_${String(j + 1).padStart(3, '0')}`,
+          startTime: execStartTime,
+          endTime: execEndTime,
+          appId: execAppId,
+          status: execStatus
+        };
+        
+        executions.push(execution);
+        if (j === executionCount - 1) {
+          latestExecution = execution;
+        }
+      }
+
+      // 使用最新执行记录的信息作为任务的主要信息
+      const mainExecution = latestExecution || executions[executions.length - 1];
+
       this.allTasks.push({
         id: `task_${String(i).padStart(4, '0')}`,
         taskName: friendlyTaskName,
         createTime,
-        status,
+        status: mainExecution.status,
         tables,
-        startTime,
-        endTime,
-        appId: status !== 'pending' ? `application_${Date.now() - Math.floor(Math.random() * 10000000)}_${String(Math.floor(Math.random() * 9999)).padStart(4, '0')}` : '-',
-        analysisTypes
+        startTime: mainExecution.startTime,
+        endTime: mainExecution.endTime,
+        appId: mainExecution.appId,
+        analysisTypes,
+        executions: executions.reverse() // 最新的在前
       });
     }
 
@@ -583,11 +627,64 @@ export class TaskListComponent implements OnInit {
     return results[Math.floor(Math.random() * results.length)];
   }
 
+  // 操作：启动任务
+  startTask(task: AnalysisTask, execution?: TaskExecution): void {
+    if (confirm(`确定要启动任务 "${task.taskName}" 吗？`)) {
+      // 创建新的执行记录
+      const newExecution: TaskExecution = {
+        id: `exec_${task.id}_${String((task.executions?.length || 0) + 1).padStart(3, '0')}`,
+        startTime: '-',
+        endTime: '-',
+        appId: '-',
+        status: 'pending'
+      };
+      
+      // 如果是基于已有执行记录启动，更新其状态
+      if (execution) {
+        execution.status = 'pending';
+        execution.startTime = '-';
+        execution.endTime = '-';
+        execution.appId = '-';
+      } else {
+        // 否则添加新的执行记录
+        if (!task.executions) {
+          task.executions = [];
+        }
+        task.executions.unshift(newExecution); // 最新的在前
+      }
+      
+      // 更新任务主状态
+      task.status = 'pending';
+      task.startTime = '-';
+      task.endTime = '-';
+      task.appId = '-';
+      console.log('启动任务:', task.taskName);
+    }
+  }
+
   // 操作：停止任务
-  stopTask(task: AnalysisTask): void {
+  stopTask(task: AnalysisTask, execution?: TaskExecution): void {
     if (confirm(`确定要停止任务 "${task.taskName}" 吗？`)) {
-      task.status = 'stopped';
-      task.endTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      const endTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      
+      // 如果指定了执行记录，更新该记录
+      if (execution) {
+        execution.status = 'stopped';
+        execution.endTime = endTime;
+      }
+      
+      // 更新任务主状态（使用最新的执行记录）
+      if (task.executions && task.executions.length > 0) {
+        const latestExec = task.executions[0];
+        latestExec.status = 'stopped';
+        latestExec.endTime = endTime;
+        task.status = 'stopped';
+        task.endTime = endTime;
+      } else {
+        task.status = 'stopped';
+        task.endTime = endTime;
+      }
+      
       console.log('停止任务:', task.taskName);
     }
   }
@@ -755,7 +852,8 @@ export class TaskListComponent implements OnInit {
       startTime: '-',
       endTime: '-',
       appId: '-',
-      analysisTypes: selectedAnalysis
+      analysisTypes: selectedAnalysis,
+      executions: [] // 新任务还没有执行记录
     };
 
     this.allTasks.unshift(newTask);
@@ -766,8 +864,38 @@ export class TaskListComponent implements OnInit {
   }
 
   // 判断是否可以查看报告
-  canViewReport(task: AnalysisTask): boolean {
+  canViewReport(task: AnalysisTask, execution?: TaskExecution): boolean {
+    if (execution) {
+      return execution.status === 'completed';
+    }
     return task.status === 'completed';
+  }
+
+  // 判断执行记录是否可以启动
+  canStartExecution(execution: TaskExecution): boolean {
+    return execution.status === 'stopped' || execution.status === 'failed' || execution.status === 'completed';
+  }
+
+  // 判断执行记录是否可以停止
+  canStopExecution(execution: TaskExecution): boolean {
+    return execution.status === 'pending' || execution.status === 'running';
+  }
+
+  // 查看报告（基于执行记录）
+  viewReportForExecution(task: AnalysisTask, execution: TaskExecution): void {
+    // 临时设置任务状态为执行记录的状态，以便使用现有的 viewReport 方法
+    const originalStatus = task.status;
+    const originalAppId = task.appId;
+    task.status = execution.status;
+    task.appId = execution.appId;
+    this.viewReport(task);
+    task.status = originalStatus;
+    task.appId = originalAppId;
+  }
+
+  // 判断是否可以启动
+  canStart(task: AnalysisTask): boolean {
+    return task.status === 'stopped' || task.status === 'failed' || task.status === 'completed';
   }
 
   // 判断是否可以停止
