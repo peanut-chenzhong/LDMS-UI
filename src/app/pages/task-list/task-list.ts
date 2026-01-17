@@ -41,6 +41,9 @@ export class TaskListComponent implements OnInit {
   modalTables: string[] = [];
   modalTaskName = '';
 
+  // 展开的任务行
+  expandedTaskId: string | null = null;
+
   // 状态筛选
   statusFilter = '';
   statusOptions = [
@@ -51,6 +54,9 @@ export class TaskListComponent implements OnInit {
     { value: 'failed', label: '失败' },
     { value: 'stopped', label: '已停止' }
   ];
+
+  // 任务名搜索
+  searchTaskName = '';
 
   // 表搜索
   searchDatabase = '';
@@ -66,6 +72,7 @@ export class TaskListComponent implements OnInit {
 
   // 新增任务弹窗
   showCreateModal = false;
+  newTaskName = '';  // 用户输入的任务名
   analysisOptions = [
     { key: 'compaction', label: 'compaction分析', checked: false },
     { key: 'clean', label: 'clean分析', checked: false },
@@ -189,9 +196,14 @@ export class TaskListComponent implements OnInit {
       const shuffled = [...allAnalysisTypes].sort(() => Math.random() - 0.5);
       const analysisTypes = shuffled.slice(0, analysisCount);
 
+      // 生成友好的任务名
+      const taskPrefix = taskPrefixes[Math.floor(Math.random() * taskPrefixes.length)];
+      const taskSuffix = String(i).padStart(3, '0');
+      const friendlyTaskName = `${taskPrefix}_${taskSuffix}`;
+
       this.allTasks.push({
         id: `task_${String(i).padStart(4, '0')}`,
-        taskName: this.generateUUID(),
+        taskName: friendlyTaskName,
         createTime,
         status,
         tables,
@@ -238,6 +250,14 @@ export class TaskListComponent implements OnInit {
         return false;
       }
       
+      // 任务名搜索过滤
+      if (this.searchTaskName) {
+        const taskNameSearch = this.searchTaskName.toLowerCase().trim();
+        if (!task.taskName.toLowerCase().includes(taskNameSearch)) {
+          return false;
+        }
+      }
+      
       // 表搜索过滤
       if (this.searchDatabase || this.searchTableName) {
         const dbSearch = this.searchDatabase.toLowerCase().trim();
@@ -273,6 +293,7 @@ export class TaskListComponent implements OnInit {
 
   onReset(): void {
     this.statusFilter = '';
+    this.searchTaskName = '';
     this.searchDatabase = '';
     this.searchTableName = '';
     this.filteredDatabases = [...this.allDatabases];
@@ -620,6 +641,7 @@ export class TaskListComponent implements OnInit {
 
   // 重置新增表单
   resetCreateForm(): void {
+    this.newTaskName = '';
     this.analysisOptions.forEach(opt => opt.checked = false);
     this.partitionAnalysisEnabled = false;
     this.partitionAnalysisMode = 'recent_compaction';
@@ -695,6 +717,12 @@ export class TaskListComponent implements OnInit {
       return;
     }
 
+    // 验证任务名
+    if (!this.newTaskName || !this.newTaskName.trim()) {
+      alert('请输入任务名称');
+      return;
+    }
+
     // 验证指定commit时间
     if (this.partitionAnalysisEnabled && this.partitionAnalysisMode === 'specified_commit') {
       if (!this.specifiedCommitTime) {
@@ -720,7 +748,7 @@ export class TaskListComponent implements OnInit {
     // 创建新任务
     const newTask: AnalysisTask = {
       id: `task_${String(this.allTasks.length + 1).padStart(4, '0')}`,
-      taskName: this.generateUUID(),
+      taskName: this.newTaskName.trim(),
       createTime: new Date().toISOString().slice(0, 19).replace('T', ' '),
       status: 'pending',
       tables: this.selectedTables.map(t => `${this.selectedDatabase}.${t}`),
@@ -734,7 +762,7 @@ export class TaskListComponent implements OnInit {
     this.filterTasks();
     this.closeCreateModal();
     
-    alert(`任务创建成功！\n分析项: ${selectedAnalysis.join(', ')}\n分析表数: ${this.selectedTables.length}`);
+    alert(`任务创建成功！\n任务名: ${this.newTaskName.trim()}\n分析项: ${selectedAnalysis.join(', ')}\n分析表数: ${this.selectedTables.length}`);
   }
 
   // 判断是否可以查看报告
@@ -750,5 +778,19 @@ export class TaskListComponent implements OnInit {
   // 判断是否可以删除
   canDelete(task: AnalysisTask): boolean {
     return task.status !== 'running';
+  }
+
+  // 切换任务行展开状态
+  toggleTaskRow(task: AnalysisTask): void {
+    if (this.expandedTaskId === task.id) {
+      this.expandedTaskId = null;
+    } else {
+      this.expandedTaskId = task.id;
+    }
+  }
+
+  // 判断任务行是否展开
+  isTaskExpanded(task: AnalysisTask): boolean {
+    return this.expandedTaskId === task.id;
   }
 }

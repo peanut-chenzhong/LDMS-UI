@@ -328,6 +328,59 @@ $status-stopped: #f5a623;
       color: $text-primary;
       vertical-align: middle;
     }
+
+    // 任务行样式
+    .task-row {
+      cursor: pointer;
+
+      &.expanded {
+        background: rgba($primary-color, 0.05);
+        border-left: 3px solid $primary-color;
+      }
+    }
+
+    // 任务详情行
+    .task-detail-row {
+      background: $bg-gray;
+      border-top: none;
+
+      .task-detail-cell {
+        padding: 0 !important;
+        border-top: 1px solid $border-color;
+      }
+    }
+  }
+}
+
+// 任务详情内容
+.task-detail-content {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 20px;
+  flex-wrap: wrap;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+
+  .detail-label {
+    color: $text-secondary;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .detail-value {
+    color: $text-primary;
+    font-family: 'Consolas', 'Monaco', monospace;
+  }
+
+  &.detail-actions {
+    margin-left: auto;
+    gap: 8px;
   }
 }
 
@@ -891,6 +944,28 @@ $status-stopped: #f5a623;
   }
 }
 
+.form-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid $border-color;
+  border-radius: 4px;
+  font-size: 14px;
+  color: $text-primary;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+
+  &::placeholder {
+    color: #b8bcc4;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $primary-color;
+    box-shadow: 0 0 0 2px rgba(0, 112, 204, 0.1);
+  }
+}
+
 .form-select {
   width: 100%;
   height: 36px;
@@ -907,6 +982,11 @@ $status-stopped: #f5a623;
     outline: none;
     border-color: $primary-color;
   }
+}
+
+.required-mark {
+  color: $status-failed;
+  margin-left: 4px;
 }
 
 .table-search-box {

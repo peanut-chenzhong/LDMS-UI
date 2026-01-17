@@ -24,6 +24,15 @@
         </select>
       </div>
       <div class="filter-item">
+        <label class="filter-label">任务名</label>
+        <input 
+          type="text" 
+          class="filter-input" 
+          [(ngModel)]="searchTaskName"
+          (keyup.enter)="onSearch()"
+          placeholder="输入任务名搜索">
+      </div>
+      <div class="filter-item">
         <label class="filter-label">Database</label>
         <div class="search-dropdown-container">
           <input 
@@ -145,7 +154,7 @@
         </thead>
         <tbody>
           @for (task of paginatedTasks; track task.id) {
-            <tr>
+            <tr class="task-row" [class.expanded]="isTaskExpanded(task)" (click)="toggleTaskRow(task)">
               <td class="col-task-name">
                 <span class="task-name">{{ task.taskName }}</span>
               </td>
@@ -156,7 +165,7 @@
                 </span>
               </td>
               <td class="col-tables">
-                <span class="tables-count" (click)="openTablesModal(task, $event)">
+                <span class="tables-count" (click)="openTablesModal(task, $event); $event.stopPropagation()">
                   {{ task.tables.length }}
                 </span>
               </td>
@@ -166,7 +175,7 @@
                 <span class="app-id" [title]="task.appId">{{ task.appId }}</span>
               </td>
               <td class="col-actions">
-                <div class="action-buttons">
+                <div class="action-buttons" (click)="$event.stopPropagation()">
                   <button 
                     class="btn-action btn-view" 
                     [class.disabled]="!canViewReport(task)"
@@ -191,6 +200,41 @@
                 </div>
               </td>
             </tr>
+            @if (isTaskExpanded(task)) {
+              <tr class="task-detail-row">
+                <td colspan="8" class="task-detail-cell">
+                  <div class="task-detail-content">
+                    <div class="detail-item">
+                      <span class="detail-label">任务 AppID:</span>
+                      <span class="detail-value">{{ task.appId }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">开始时间:</span>
+                      <span class="detail-value">{{ task.startTime }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">完成时间:</span>
+                      <span class="detail-value">{{ task.endTime }}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">状态:</span>
+                      <span class="status-badge" [ngClass]="getStatusClass(task.status)">
+                        {{ getStatusText(task.status) }}
+                      </span>
+                    </div>
+                    <div class="detail-item detail-actions">
+                      <button 
+                        class="btn-action btn-view" 
+                        [class.disabled]="!canViewReport(task)"
+                        [disabled]="!canViewReport(task)"
+                        (click)="canViewReport(task) && viewReport(task)">
+                        查看报告
+                      </button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            }
           } @empty {
             <tr>
               <td colspan="8" class="empty-cell">暂无任务数据</td>
@@ -278,6 +322,17 @@
           <button class="modal-close" (click)="closeCreateModal()">✕</button>
         </div>
         <div class="modal-body">
+          <!-- 任务名称输入 -->
+          <div class="form-section">
+            <label class="form-label">任务名称 <span class="required-mark">*</span></label>
+            <input 
+              type="text" 
+              class="form-input"
+              [(ngModel)]="newTaskName"
+              placeholder="请输入任务名称"
+              maxlength="100">
+          </div>
+
           <!-- 分析项选择 -->
           <div class="form-section">
             <label class="form-label">分析项</label>
