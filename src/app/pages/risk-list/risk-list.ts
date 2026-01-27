@@ -1,6 +1,10 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TiTableModule } from '@opentiny/ng-table';
+import { TiButtonModule } from '@opentiny/ng-button';
+import { TiSelectModule } from '@opentiny/ng-select';
+import { TiPaginationModule } from '@opentiny/ng-pagination';
 
 interface RiskItem {
   id: string;
@@ -14,7 +18,14 @@ interface RiskItem {
 @Component({
   selector: 'app-risk-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule, 
+    FormsModule,
+    TiTableModule,
+    TiButtonModule,
+    TiSelectModule,
+    TiPaginationModule
+  ],
   templateUrl: './risk-list.html',
   styleUrl: './risk-list.scss'
 })
@@ -22,33 +33,44 @@ export class RiskListComponent implements OnInit {
   // 数据
   allRisks: RiskItem[] = [];
   filteredRisks: RiskItem[] = [];
+  displayedRisks: RiskItem[] = [];
 
-  // 分页
-  currentPage = 1;
-  pageSize = 10;
-  pageSizeOptions = [10, 20, 30, 50, 100];
+  // tiny-ng 表格数据源
+  srcData = {
+    data: [] as RiskItem[],
+    state: {
+      searched: false,
+      sorted: false,
+      paginated: true
+    }
+  };
+
+  // tiny-ng 分页配置
+  pagination = {
+    currentPage: 1,
+    pageSize: {
+      options: [10, 20, 30, 50, 100],
+      size: 10
+    } as any,
+    totalNumber: 0
+  };
 
   // 搜索
   searchDatabase = '';
   searchTableName = '';
-  searchRiskType = '';
+  selectedRiskType: any = null;
 
   // 排序
   sortField: string = '';
   sortDirection: 'asc' | 'desc' = 'asc';
 
-  // 下拉选项
-  allDatabases: string[] = [];
-  allTableNames: string[] = [];
-  allRiskTypes: string[] = [];
-  filteredDatabases: string[] = [];
-  filteredTableNames: string[] = [];
+  // 下拉选项（tiny-ng 格式）
+  allDatabases: any[] = [];
+  allTableNames: any[] = [];
+  selectedDatabase: any = null;
+  selectedTableName: any = null;
 
-  // 下拉框显示状态
-  showDatabaseDropdown = false;
-  showTableNameDropdown = false;
-
-  // 风险类型选项
+  // 风险类型选项（tiny-ng 格式）
   riskTypeOptions = [
     { value: '', label: '全部类型' },
     { value: 'metadata_bloat', label: '元数据膨胀' },
@@ -59,44 +81,21 @@ export class RiskListComponent implements OnInit {
     { value: 'archive_abnormal', label: 'archive异常' }
   ];
 
-  get totalPages(): number {
-    return Math.ceil(this.filteredRisks.length / this.pageSize) || 1;
-  }
-
-  get paginatedRisks(): RiskItem[] {
-    const start = (this.currentPage - 1) * this.pageSize;
-    return this.filteredRisks.slice(start, start + this.pageSize);
-  }
-
-  get visiblePages(): (number | string)[] {
-    const pages: (number | string)[] = [];
-    const total = this.totalPages;
-    const current = this.currentPage;
-
-    if (total <= 7) {
-      for (let i = 1; i <= total; i++) {
-        pages.push(i);
-      }
-    } else {
-      pages.push(1);
-      if (current > 3) {
-        pages.push('...');
-      }
-      for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
-        pages.push(i);
-      }
-      if (current < total - 2) {
-        pages.push('...');
-      }
-      pages.push(total);
-    }
-    return pages;
-  }
+  // 表格列配置
+  displayedColumns = [
+    { title: '数据库名', field: 'database', width: '120px' },
+    { title: '表名', field: 'tablename', width: '180px' },
+    { title: '风险类型', field: 'riskType', width: '130px' },
+    { title: '预警时间', field: 'alertTime', width: '160px', sortable: true },
+    { title: '原因', field: 'reason', width: 'auto' }
+  ];
 
   ngOnInit(): void {
     this.generateMockData();
     this.filteredRisks = [...this.allRisks];
+    this.pagination.totalNumber = this.filteredRisks.length;
     this.extractSearchOptions();
+    this.updateTableData();
   }
 
   generateMockData(): void {
@@ -178,47 +177,70 @@ export class RiskListComponent implements OnInit {
       tableNames.add(risk.tablename);
     });
 
-    this.allDatabases = Array.from(databases).sort();
-    this.allTableNames = Array.from(tableNames).sort();
-    this.filteredDatabases = [...this.allDatabases];
-    this.filteredTableNames = [...this.allTableNames];
+    // 转换为 tiny-ng select 需要的格式
+    this.allDatabases = Array.from(databases).sort().map(db => ({
+      label: db,
+      value: db
+    }));
+    this.allTableNames = Array.from(tableNames).sort().map(table => ({
+      label: table,
+      value: table
+    }));
+  }
+
+  // 更新表格数据
+  updateTableData(): void {
+    const start = (this.pagination.currentPage - 1) * this.pagination.pageSize.size;
+    const end = start + this.pagination.pageSize.size;
+    const paginatedData = this.filteredRisks.slice(start, end);
+    
+    this.srcData = {
+      data: paginatedData,
+      state: {
+        searched: true,
+        sorted: !!this.sortField,
+        paginated: true
+      }
+    };
+    
+    this.displayedRisks = [...paginatedData];
   }
 
   filterRisks(): void {
     this.filteredRisks = this.allRisks.filter(risk => {
-      const dbMatch = !this.searchDatabase || 
-        risk.database.toLowerCase().includes(this.searchDatabase.toLowerCase());
-      const tableMatch = !this.searchTableName || 
-        risk.tablename.toLowerCase().includes(this.searchTableName.toLowerCase());
-      const typeMatch = !this.searchRiskType || 
-        risk.riskType === this.riskTypeOptions.find(o => o.value === this.searchRiskType)?.label;
+      const dbMatch = !this.selectedDatabase || 
+        risk.database.toLowerCase().includes(this.selectedDatabase.value.toLowerCase());
+      const tableMatch = !this.selectedTableName || 
+        risk.tablename.toLowerCase().includes(this.selectedTableName.value.toLowerCase());
+      const typeMatch = !this.selectedRiskType || !this.selectedRiskType.value ||
+        risk.riskType === this.selectedRiskType.label;
       return dbMatch && tableMatch && typeMatch;
     });
     
     // 如果有排序，应用排序
     if (this.sortField) {
       this.applySort();
+    } else {
+      this.pagination.currentPage = 1;
+      this.pagination.totalNumber = this.filteredRisks.length;
+      this.updateTableData();
     }
-    
-    this.currentPage = 1;
   }
 
   onSearch(): void {
     this.filterRisks();
-    this.showDatabaseDropdown = false;
-    this.showTableNameDropdown = false;
   }
 
   onReset(): void {
-    this.searchDatabase = '';
-    this.searchTableName = '';
-    this.searchRiskType = '';
+    this.selectedDatabase = null;
+    this.selectedTableName = null;
+    this.selectedRiskType = null;
     this.sortField = '';
     this.sortDirection = 'asc';
-    this.filteredDatabases = [...this.allDatabases];
-    this.filteredTableNames = [...this.allTableNames];
     this.filteredRisks = [...this.allRisks];
-    this.currentPage = 1;
+    this.pagination.currentPage = 1;
+    this.pagination.totalNumber = this.filteredRisks.length;
+    this.updateTableData();
   }
 
   // 排序
@@ -252,71 +274,17 @@ export class RiskListComponent implements OnInit {
       
       return 0;
     });
+    
+    this.pagination.currentPage = 1;
+    this.pagination.totalNumber = this.filteredRisks.length;
+    this.updateTableData();
   }
 
-  // Database 下拉搜索
-  onDatabaseInputChange(): void {
-    const keyword = this.searchDatabase.toLowerCase().trim();
-    if (keyword) {
-      this.filteredDatabases = this.allDatabases.filter(db => 
-        db.toLowerCase().includes(keyword)
-      );
-    } else {
-      this.filteredDatabases = [...this.allDatabases];
-    }
-    this.showDatabaseDropdown = true;
-  }
-
-  onDatabaseFocus(): void {
-    this.showDatabaseDropdown = true;
-    this.showTableNameDropdown = false;
-  }
-
-  selectDatabase(db: string): void {
-    this.searchDatabase = db;
-    this.showDatabaseDropdown = false;
-  }
-
-  // TableName 下拉搜索
-  onTableNameInputChange(): void {
-    const keyword = this.searchTableName.toLowerCase().trim();
-    if (keyword) {
-      this.filteredTableNames = this.allTableNames.filter(table => 
-        table.toLowerCase().includes(keyword)
-      );
-    } else {
-      this.filteredTableNames = [...this.allTableNames];
-    }
-    this.showTableNameDropdown = true;
-  }
-
-  onTableNameFocus(): void {
-    this.showTableNameDropdown = true;
-    this.showDatabaseDropdown = false;
-  }
-
-  selectTableName(table: string): void {
-    this.searchTableName = table;
-    this.showTableNameDropdown = false;
-  }
-
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: Event): void {
-    const target = event.target as HTMLElement;
-    if (!target.closest('.search-dropdown-container')) {
-      this.showDatabaseDropdown = false;
-      this.showTableNameDropdown = false;
-    }
-  }
-
-  goToPage(page: number): void {
-    if (page >= 1 && page <= this.totalPages) {
-      this.currentPage = page;
-    }
-  }
-
-  onPageSizeChange(): void {
-    this.currentPage = 1;
+  // tiny-ng 分页事件处理
+  onPageUpdate(event: any): void {
+    this.pagination.currentPage = event.currentPage;
+    this.pagination.pageSize.size = event.size;
+    this.updateTableData();
   }
 
   // 生成随机日期时间（过去N天内）

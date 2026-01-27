@@ -10,90 +10,50 @@
     <div class="filter-controls">
       <div class="filter-item">
         <label class="filter-label">Database</label>
-        <div class="search-dropdown-container">
-          <input 
-            type="text" 
-            class="filter-input filter-input-dropdown" 
-            [(ngModel)]="filters.database"
-            (input)="onDatabaseInputChange()"
-            (focus)="onDatabaseFocus()"
-            (keyup.enter)="onSearch()"
-            placeholder="选择或输入database">
-          <span class="dropdown-arrow">▼</span>
-          @if (showDatabaseDropdown && filteredDatabases.length > 0) {
-            <div class="search-dropdown">
-              @for (db of filteredDatabases; track db) {
-                <div 
-                  class="dropdown-item" 
-                  [class.selected]="filters.database === db"
-                  (click)="selectDatabase(db)">
-                  {{ db }}
-                </div>
-              }
-            </div>
-          }
-        </div>
+        <ti-select
+          [(ngModel)]="selectedDatabase"
+          [options]="allDatabases"
+          [searchable]="true"
+          [clearable]="true"
+          placeholder="选择或输入database"
+          style="width: 200px;">
+        </ti-select>
       </div>
       <div class="filter-item">
         <label class="filter-label">TableName</label>
-        <div class="search-dropdown-container">
-          <input 
-            type="text" 
-            class="filter-input filter-input-dropdown" 
-            [(ngModel)]="filters.tableName"
-            (input)="onTableNameInputChange()"
-            (focus)="onTableNameFocus()"
-            (keyup.enter)="onSearch()"
-            placeholder="选择或输入表名">
-          <span class="dropdown-arrow">▼</span>
-          @if (showTableNameDropdown && filteredTableNames.length > 0) {
-            <div class="search-dropdown">
-              @for (table of filteredTableNames; track table) {
-                <div 
-                  class="dropdown-item"
-                  [class.selected]="filters.tableName === table"
-                  (click)="selectTableName(table)">
-                  {{ table }}
-                </div>
-              }
-            </div>
-          }
-        </div>
+        <ti-select
+          [(ngModel)]="selectedTableName"
+          [options]="allTableNames"
+          [searchable]="true"
+          [clearable]="true"
+          placeholder="选择或输入表名"
+          style="width: 200px;">
+        </ti-select>
       </div>
     </div>
     <div class="filter-actions">
-      <button class="btn btn-primary" (click)="onSearch()">Search</button>
-      <button class="btn btn-secondary" (click)="onReset()">Reset</button>
+      <button tiButton type="button" color="primary" (click)="onSearch()">Search</button>
+      <button tiButton type="button" (click)="onReset()">Reset</button>
     </div>
   </div>
 
   <!-- 表格区域 -->
   <div class="table-container">
-    <div class="table-wrapper">
-      <table class="data-table">
+    <ti-table #myTable
+      [srcData]="srcData"
+      [(displayedData)]="displayedData"
+      [columns]="displayedColumns">
+      <table>
         <thead>
           <tr>
-            <!-- 固定列 -->
-            @for (col of fixedColumns; track col.key) {
-              <th class="fixed-col">{{ col.label }}</th>
-            }
-            <!-- 可拖拽列 -->
-            @for (col of draggableColumns; track col.key; let i = $index) {
+            @for (col of displayedColumns; track col.field) {
               <th 
-                class="draggable-col"
                 [class.sortable]="col.sortable"
-                draggable="true"
-                (dragstart)="onDragStart($event, i)"
-                (dragover)="onDragOver($event, i)"
-                (dragend)="onDragEnd()"
-                (drop)="onDrop($event, i)"
-                [class.drag-over]="dragOverIndex === i"
-                (click)="col.sortable ? onSort(col.key) : null">
-                <span class="drag-handle">⋮⋮</span>
-                {{ col.label }}
+                (click)="col.sortable ? onSort(col.field) : null">
+                {{ col.title }}
                 @if (col.sortable) {
-                  <span class="sort-icon" [class.active]="sortField === col.key">
-                    @if (sortField === col.key) {
+                  <span class="sort-icon" [class.active]="sortField === col.field">
+                    @if (sortField === col.field) {
                       {{ sortDirection === 'asc' ? '↑' : '↓' }}
                     } @else {
                       ↕
@@ -105,69 +65,34 @@
           </tr>
         </thead>
         <tbody>
-          @for (row of paginatedData; track row.tablename) {
-            <tr 
-              [class.selected]="selectedRow === row"
-              (click)="onRowSelect(row)">
-              <!-- 固定列数据 -->
-              @for (col of fixedColumns; track col.key) {
-                <td class="fixed-col">{{ row[col.key] }}</td>
-              }
-              <!-- 可拖拽列数据 -->
-              @for (col of draggableColumns; track col.key) {
-                <td>{{ row[col.key] }}</td>
+          @for (row of displayedData; track row.tablename) {
+            <tr (click)="onRowClick(row)" [class.selected]="selectedRow === row">
+              @for (col of displayedColumns; track col.field) {
+                <td>
+                  @if (col.field === 'tablesize' || col.field === 'filenumber' || col.field === 'archivelogsize') {
+                    {{ row[col.field] | number }}
+                  } @else {
+                    {{ row[col.field] }}
+                  }
+                </td>
               }
             </tr>
           } @empty {
             <tr>
-              <td [attr.colspan]="fixedColumns.length + draggableColumns.length" class="empty-cell">No data available</td>
+              <td [attr.colspan]="displayedColumns.length" class="empty-cell">No data available</td>
             </tr>
           }
         </tbody>
       </table>
-    </div>
+    </ti-table>
 
     <!-- 分页控件 -->
-    <div class="pagination">
-      <div class="pagination-left">
-        <span class="pagination-total">Total {{ filteredData.length }} items</span>
-        <div class="page-size-selector">
-          <label>每页</label>
-          <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
-            @for (size of pageSizeOptions; track size) {
-              <option [value]="size">{{ size }}</option>
-            }
-          </select>
-          <label>条</label>
-        </div>
-      </div>
-      <div class="pagination-controls">
-        <button 
-          class="pagination-btn" 
-          [disabled]="currentPage === 1"
-          (click)="goToPage(currentPage - 1)">
-          ‹ Prev
-        </button>
-        @for (page of visiblePages; track page) {
-          @if (page === '...') {
-            <span class="pagination-ellipsis">...</span>
-          } @else {
-            <button 
-              class="pagination-btn pagination-num"
-              [class.active]="currentPage === page"
-              (click)="goToPage(+page)">
-              {{ page }}
-            </button>
-          }
-        }
-        <button 
-          class="pagination-btn"
-          [disabled]="currentPage === totalPages"
-          (click)="goToPage(currentPage + 1)">
-          Next ›
-        </button>
-      </div>
-    </div>
+    <ti-pagination
+      [(currentPage)]="pagination.currentPage"
+      [pageSize]="pagination.pageSize"
+      [totalNumber]="pagination.totalNumber"
+      (pageUpdate)="onPageUpdate($event)">
+    </ti-pagination>
   </div>
 
   <!-- 折线图区域 -->
@@ -178,7 +103,7 @@
           <span class="chart-icon">📊</span>
           {{ selectedRow.database }}.{{ selectedRow.tablename }} - 30天趋势
         </h3>
-        <button class="btn-close" (click)="selectedRow = null">✕</button>
+        <button tiButton type="button" variant="text" (click)="selectedRow = null">✕</button>
       </div>
       <div class="chart-container">
         <canvas baseChart

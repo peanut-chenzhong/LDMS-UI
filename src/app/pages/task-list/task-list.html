@@ -7,7 +7,7 @@
 
   <!-- 操作栏 -->
   <div class="action-bar">
-    <button class="btn btn-create" (click)="openCreateModal()">
+    <button tiButton type="button" color="primary" (click)="openCreateModal()">
       <span class="btn-icon">+</span> 新增任务
     </button>
   </div>
@@ -17,11 +17,14 @@
     <div class="filter-controls">
       <div class="filter-item">
         <label class="filter-label">任务状态</label>
-        <select class="filter-select" [(ngModel)]="statusFilter" (ngModelChange)="onStatusFilterChange()">
-          @for (opt of statusOptions; track opt.value) {
-            <option [value]="opt.value">{{ opt.label }}</option>
-          }
-        </select>
+        <ti-select
+          [(ngModel)]="selectedStatus"
+          [options]="statusOptions"
+          [clearable]="true"
+          placeholder="选择状态"
+          (ngModelChange)="onStatusFilterChange()"
+          style="width: 140px;">
+        </ti-select>
       </div>
       <div class="filter-item">
         <label class="filter-label">任务名</label>
@@ -34,71 +37,43 @@
       </div>
       <div class="filter-item">
         <label class="filter-label">Database</label>
-        <div class="search-dropdown-container">
-          <input 
-            type="text" 
-            class="filter-input filter-input-dropdown" 
-            [(ngModel)]="searchDatabase"
-            (input)="onDatabaseInputChange()"
-            (focus)="onDatabaseFocus()"
-            (keyup.enter)="onSearch()"
-            placeholder="选择或输入database">
-          <span class="dropdown-arrow">▼</span>
-          @if (showDatabaseDropdown && filteredDatabases.length > 0) {
-            <div class="search-dropdown">
-              @for (db of filteredDatabases; track db) {
-                <div 
-                  class="dropdown-item" 
-                  [class.selected]="searchDatabase === db"
-                  (click)="selectDatabase(db)">
-                  {{ db }}
-                </div>
-              }
-            </div>
-          }
-        </div>
+        <ti-select
+          [(ngModel)]="selectedSearchDatabase"
+          [options]="allDatabases"
+          [searchable]="true"
+          [clearable]="true"
+          placeholder="选择或输入database"
+          style="width: 180px;">
+        </ti-select>
       </div>
       <div class="filter-item">
         <label class="filter-label">TableName</label>
-        <div class="search-dropdown-container">
-          <input 
-            type="text" 
-            class="filter-input filter-input-dropdown" 
-            [(ngModel)]="searchTableName"
-            (input)="onTableNameInputChange()"
-            (focus)="onTableNameFocus()"
-            (keyup.enter)="onSearch()"
-            placeholder="选择或输入表名">
-          <span class="dropdown-arrow">▼</span>
-          @if (showTableNameDropdown && filteredTableNames.length > 0) {
-            <div class="search-dropdown">
-              @for (table of filteredTableNames; track table) {
-                <div 
-                  class="dropdown-item"
-                  [class.selected]="searchTableName === table"
-                  (click)="selectTableName(table)">
-                  {{ table }}
-                </div>
-              }
-            </div>
-          }
-        </div>
+        <ti-select
+          [(ngModel)]="selectedSearchTableName"
+          [options]="allTableNames"
+          [searchable]="true"
+          [clearable]="true"
+          placeholder="选择或输入表名"
+          style="width: 180px;">
+        </ti-select>
       </div>
     </div>
     <div class="filter-actions">
-      <button class="btn btn-primary" (click)="onSearch()">Search</button>
-      <button class="btn btn-secondary" (click)="onReset()">Reset</button>
+      <button tiButton type="button" color="primary" (click)="onSearch()">Search</button>
+      <button tiButton type="button" (click)="onReset()">Reset</button>
     </div>
   </div>
 
   <!-- 表格区域 -->
   <div class="table-container">
-    <div class="table-wrapper">
-      <table class="data-table">
+    <ti-table
+      [srcData]="srcData"
+      [(displayedData)]="displayedTasks">
+      <table>
         <thead>
           <tr>
-            <th class="col-task-name">任务名</th>
-            <th class="col-create-time sortable" (click)="onSort('createTime')">
+            <th width="160">任务名</th>
+            <th width="160" class="sortable" (click)="onSort('createTime')">
               创建时间
               <span class="sort-icon" [class.active]="sortField === 'createTime'">
                 @if (sortField === 'createTime') {
@@ -108,7 +83,7 @@
                 }
               </span>
             </th>
-            <th class="col-status sortable" (click)="onSort('status')">
+            <th width="100" class="sortable" (click)="onSort('status')">
               任务状态
               <span class="sort-icon" [class.active]="sortField === 'status'">
                 @if (sortField === 'status') {
@@ -118,7 +93,7 @@
                 }
               </span>
             </th>
-            <th class="col-tables sortable" (click)="onSort('tableCount')">
+            <th width="80" class="sortable" (click)="onSort('tableCount')">
               表数量
               <span class="sort-icon" [class.active]="sortField === 'tableCount'">
                 @if (sortField === 'tableCount') {
@@ -128,7 +103,7 @@
                 }
               </span>
             </th>
-            <th class="col-start-time sortable" (click)="onSort('startTime')">
+            <th width="160" class="sortable" (click)="onSort('startTime')">
               开始时间
               <span class="sort-icon" [class.active]="sortField === 'startTime'">
                 @if (sortField === 'startTime') {
@@ -138,7 +113,7 @@
                 }
               </span>
             </th>
-            <th class="col-end-time sortable" (click)="onSort('endTime')">
+            <th width="160" class="sortable" (click)="onSort('endTime')">
               完成时间
               <span class="sort-icon" [class.active]="sortField === 'endTime'">
                 @if (sortField === 'endTime') {
@@ -148,33 +123,33 @@
                 }
               </span>
             </th>
-            <th class="col-app-id">任务 AppID</th>
-            <th class="col-actions">操作</th>
+            <th width="200">任务 AppID</th>
+            <th width="200">操作</th>
           </tr>
         </thead>
         <tbody>
-          @for (task of paginatedTasks; track task.id) {
+          @for (task of displayedTasks; track task.id) {
             <tr class="task-row" [class.expanded]="isTaskExpanded(task)" (click)="toggleTaskRow(task)">
-              <td class="col-task-name">
+              <td>
                 <span class="task-name">{{ task.taskName }}</span>
               </td>
-              <td class="col-create-time">{{ task.createTime }}</td>
-              <td class="col-status">
+              <td>{{ task.createTime }}</td>
+              <td>
                 <span class="status-badge" [ngClass]="getStatusClass(task.status)">
                   {{ getStatusText(task.status) }}
                 </span>
               </td>
-              <td class="col-tables">
+              <td>
                 <span class="tables-count" (click)="openTablesModal(task, $event); $event.stopPropagation()">
                   {{ task.tables.length }}
                 </span>
               </td>
-              <td class="col-start-time">{{ task.startTime }}</td>
-              <td class="col-end-time">{{ task.endTime }}</td>
-              <td class="col-app-id">
+              <td>{{ task.startTime }}</td>
+              <td>{{ task.endTime }}</td>
+              <td>
                 <span class="app-id" [title]="task.appId">{{ task.appId }}</span>
               </td>
-              <td class="col-actions">
+              <td>
                 <div class="action-buttons" (click)="$event.stopPropagation()">
                   <button 
                     class="btn-action btn-view" 
@@ -264,49 +239,15 @@
           }
         </tbody>
       </table>
-    </div>
+    </ti-table>
 
     <!-- 分页控件 -->
-    <div class="pagination">
-      <div class="pagination-left">
-        <span class="pagination-total">Total {{ filteredTasks.length }} items</span>
-        <div class="page-size-selector">
-          <label>每页</label>
-          <select [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
-            @for (size of pageSizeOptions; track size) {
-              <option [value]="size">{{ size }}</option>
-            }
-          </select>
-          <label>条</label>
-        </div>
-      </div>
-      <div class="pagination-controls">
-        <button 
-          class="pagination-btn" 
-          [disabled]="currentPage === 1"
-          (click)="goToPage(currentPage - 1)">
-          ‹ Prev
-        </button>
-        @for (page of visiblePages; track page) {
-          @if (page === '...') {
-            <span class="pagination-ellipsis">...</span>
-          } @else {
-            <button 
-              class="pagination-btn pagination-num"
-              [class.active]="currentPage === page"
-              (click)="goToPage(+page)">
-              {{ page }}
-            </button>
-          }
-        }
-        <button 
-          class="pagination-btn"
-          [disabled]="currentPage === totalPages"
-          (click)="goToPage(currentPage + 1)">
-          Next ›
-        </button>
-      </div>
-    </div>
+    <ti-pagination
+      [(currentPage)]="pagination.currentPage"
+      [pageSize]="pagination.pageSize"
+      [totalNumber]="pagination.totalNumber"
+      (pageUpdate)="onPageUpdate($event)">
+    </ti-pagination>
   </div>
 
   <!-- 表列表弹窗 -->
@@ -329,7 +270,7 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn-modal-close" (click)="closeTablesModal()">关闭</button>
+          <button tiButton type="button" (click)="closeTablesModal()">关闭</button>
         </div>
       </div>
     </div>
@@ -438,8 +379,8 @@
           }
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" (click)="closeCreateModal()">取消</button>
-          <button class="btn btn-primary" (click)="submitCreateTask()">提交</button>
+          <button tiButton type="button" (click)="closeCreateModal()">取消</button>
+          <button tiButton type="button" color="primary" (click)="submitCreateTask()">提交</button>
         </div>
       </div>
     </div>

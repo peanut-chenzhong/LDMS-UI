@@ -1,8 +1,13 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration, ChartOptions, Chart, registerables } from 'chart.js';
+import { TiTableModule } from '@opentiny/ng-table';
+import { TiButtonModule } from '@opentiny/ng-button';
+import { TiSelectModule } from '@opentiny/ng-select';
+import { TiPaginationModule } from '@opentiny/ng-pagination';
+import { TiDropsearchModule } from '@opentiny/ng-dropsearch';
 
 // 注册 Chart.js 组件
 Chart.register(...registerables);
@@ -44,7 +49,16 @@ interface HistoryData {
 @Component({
   selector: 'app-table-search',
   standalone: true,
-  imports: [CommonModule, FormsModule, BaseChartDirective],
+  imports: [
+    CommonModule, 
+    FormsModule, 
+    BaseChartDirective,
+    TiTableModule,
+    TiButtonModule,
+    TiSelectModule,
+    TiPaginationModule,
+    TiDropsearchModule
+  ],
   templateUrl: './table-search.html',
   styleUrl: './table-search.scss'
 })
@@ -56,48 +70,123 @@ export class TableSearchComponent implements OnInit {
   };
 
   // 下拉选项（从实际数据中提取）
-  allDatabases: string[] = [];
-  allTableNames: string[] = [];
-  filteredDatabases: string[] = [];
-  filteredTableNames: string[] = [];
+  allDatabases: any[] = [];
+  allTableNames: any[] = [];
+  
+  // 选中的数据库和表名
+  selectedDatabase: any = null;
+  selectedTableName: any = null;
 
-  // 下拉框显示状态
-  showDatabaseDropdown = false;
-  showTableNameDropdown = false;
-
-  // 固定列（不可拖拽）
-  fixedColumns: ColumnDef[] = [
-    { key: 'database', label: 'database' },
-    { key: 'tablename', label: 'tablename' },
-    { key: 'createtime', label: 'createtime' },
-    { key: 'tabletype', label: 'tabletype' }
+  // 表格列配置（使用 tiny-ng 表格格式）
+  displayedColumns: any[] = [
+    { 
+      title: 'database', 
+      field: 'database',
+      width: '120px',
+      fixed: 'left'
+    },
+    { 
+      title: 'tablename', 
+      field: 'tablename',
+      width: '150px',
+      fixed: 'left'
+    },
+    { 
+      title: 'createtime', 
+      field: 'createtime',
+      width: '160px',
+      fixed: 'left'
+    },
+    { 
+      title: 'tabletype', 
+      field: 'tabletype',
+      width: '100px',
+      fixed: 'left'
+    },
+    { 
+      title: 'tablesize', 
+      field: 'tablesize',
+      width: '120px',
+      sortable: true
+    },
+    { 
+      title: 'filenumber', 
+      field: 'filenumber',
+      width: '120px',
+      sortable: true
+    },
+    { 
+      title: 'tableindex', 
+      field: 'tableindex',
+      width: '120px',
+      sortable: true
+    },
+    { 
+      title: 'lastcommittime', 
+      field: 'lastcommittime',
+      width: '180px',
+      sortable: true
+    },
+    { 
+      title: 'lastcompletecompactiontime', 
+      field: 'lastcompletecompactiontime',
+      width: '220px',
+      sortable: true
+    },
+    { 
+      title: 'lastcleantime', 
+      field: 'lastcleantime',
+      width: '180px',
+      sortable: true
+    },
+    { 
+      title: 'archivelogsize', 
+      field: 'archivelogsize',
+      width: '140px',
+      sortable: true
+    },
+    { 
+      title: 'schemaversion', 
+      field: 'schemaversion',
+      width: '130px',
+      sortable: true
+    },
+    { 
+      title: 'updatatime', 
+      field: 'updatatime',
+      width: '160px',
+      sortable: true
+    }
   ];
 
-  // 可拖拽列（全部支持排序）
-  draggableColumns: ColumnDef[] = [
-    { key: 'tablesize', label: 'tablesize', sortable: true },
-    { key: 'filenumber', label: 'filenumber', sortable: true },
-    { key: 'tableindex', label: 'tableindex', sortable: true },
-    { key: 'lastcommittime', label: 'lastcommittime', sortable: true },
-    { key: 'lastcompletecompactiontime', label: 'lastcompletecompactiontime', sortable: true },
-    { key: 'lastcleantime', label: 'lastcleantime', sortable: true },
-    { key: 'archivelogsize', label: 'archivelogsize', sortable: true },
-    { key: 'schemaversion', label: 'schemaversion', sortable: true },
-    { key: 'updatatime', label: 'updatatime', sortable: true }
-  ];
-
-  // 拖拽状态
-  dragIndex: number = -1;
-  dragOverIndex: number = -1;
+  // 表格数据源（tiny-ng 格式）
+  srcData = {
+    data: [] as TableRow[],
+    state: {
+      searched: false,
+      sorted: false,
+      paginated: false
+    }
+  };
+  
+  displayedData: TableRow[] = [];
 
   // 排序
   sortField: string = '';
   sortDirection: 'asc' | 'desc' = 'asc';
 
-  // 分页
-  currentPage = 1;
-  pageSize = 10;
-  pageSizeOptions = [10, 20, 30, 50, 100];
+  // 分页配置
+  pagination = {
+    currentPage: 1,
+    pageSize: {
+      options: [10, 20, 30, 50, 100],
+      size: 10
+    } as any,
+    totalNumber: 0
+  };
+  
+  // 当前每页显示数量（用于下拉选择器）
+  currentPageSize: number = 10;
 
   // 数据
   allData: TableRow[] = [];
@@ -169,44 +258,18 @@ export class TableSearchComponent implements OnInit {
     }
   };
 
-  get totalPages(): number {
-    return Math.ceil(this.filteredData.length / this.pageSize) || 1;
-  }
-
+  // 获取分页后的数据
   get paginatedData(): TableRow[] {
-    const start = (this.currentPage - 1) * this.pageSize;
-    return this.filteredData.slice(start, start + this.pageSize);
-  }
-
-  get visiblePages(): (number | string)[] {
-    const pages: (number | string)[] = [];
-    const total = this.totalPages;
-    const current = this.currentPage;
-
-    if (total <= 7) {
-      for (let i = 1; i <= total; i++) {
-        pages.push(i);
-      }
-    } else {
-      pages.push(1);
-      if (current > 3) {
-        pages.push('...');
-      }
-      for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
-        pages.push(i);
-      }
-      if (current < total - 2) {
-        pages.push('...');
-      }
-      pages.push(total);
-    }
-    return pages;
+    const start = (this.pagination.currentPage - 1) * this.pagination.pageSize.size;
+    return this.filteredData.slice(start, start + this.pagination.pageSize.size);
   }
 
   ngOnInit(): void {
     this.generateMockData();
     this.filteredData = [...this.allData];
+    this.pagination.totalNumber = this.filteredData.length;
     this.extractSearchOptions();
+    this.updateTableData();
   }
 
   // 从数据中提取搜索选项
@@ -219,10 +282,16 @@ export class TableSearchComponent implements OnInit {
       tableNames.add(row.tablename);
     });
 
-    this.allDatabases = Array.from(databases).sort();
-    this.allTableNames = Array.from(tableNames).sort();
-    this.filteredDatabases = [...this.allDatabases];
-    this.filteredTableNames = [...this.allTableNames];
+    // 转换为 tiny-ng select 需要的格式
+    this.allDatabases = Array.from(databases).sort().map(db => ({
+      label: db,
+      value: db
+    }));
+    
+    this.allTableNames = Array.from(tableNames).sort().map(table => ({
+      label: table,
+      value: table
+    }));
   }
 
   generateMockData(): void {
@@ -293,87 +362,52 @@ export class TableSearchComponent implements OnInit {
 
   onSearch(): void {
     this.filteredData = this.allData.filter(row => {
-      const dbSearch = this.filters.database.toLowerCase().trim();
-      const tableSearch = this.filters.tableName.toLowerCase().trim();
-      const dbMatch = !dbSearch || row.database.toLowerCase().includes(dbSearch);
-      const tableMatch = !tableSearch || row.tablename.toLowerCase().includes(tableSearch);
+      const dbMatch = !this.selectedDatabase || row.database === this.selectedDatabase.value;
+      const tableMatch = !this.selectedTableName || row.tablename === this.selectedTableName.value;
       return dbMatch && tableMatch;
     });
-    this.currentPage = 1;
+    this.pagination.currentPage = 1;
+    this.pagination.totalNumber = this.filteredData.length;
+    
+    // 如果有排序，先排序（applySort 会调用 updateTableData）
     if (this.sortField) {
       this.applySort();
+    } else {
+      this.updateTableData();
     }
-    this.showDatabaseDropdown = false;
-    this.showTableNameDropdown = false;
   }
 
   onReset(): void {
-    this.filters = { database: '', tableName: '' };
+    this.selectedDatabase = null;
+    this.selectedTableName = null;
     this.sortField = '';
     this.sortDirection = 'asc';
     this.filteredData = [...this.allData];
-    this.currentPage = 1;
+    this.pagination.currentPage = 1;
+    this.pagination.totalNumber = this.filteredData.length;
     this.selectedRow = null;
-    this.filteredDatabases = [...this.allDatabases];
-    this.filteredTableNames = [...this.allTableNames];
-    this.showDatabaseDropdown = false;
-    this.showTableNameDropdown = false;
+    this.updateTableData();
   }
 
-  // Database 下拉搜索
-  onDatabaseInputChange(): void {
-    const keyword = this.filters.database.toLowerCase().trim();
-    if (keyword) {
-      this.filteredDatabases = this.allDatabases.filter(db => 
-        db.toLowerCase().includes(keyword)
-      );
-    } else {
-      this.filteredDatabases = [...this.allDatabases];
-    }
-    this.showDatabaseDropdown = true;
-  }
-
-  onDatabaseFocus(): void {
-    this.showDatabaseDropdown = true;
-    this.showTableNameDropdown = false;
-  }
-
-  selectDatabase(db: string): void {
-    this.filters.database = db;
-    this.showDatabaseDropdown = false;
-  }
-
-  // TableName 下拉搜索
-  onTableNameInputChange(): void {
-    const keyword = this.filters.tableName.toLowerCase().trim();
-    if (keyword) {
-      this.filteredTableNames = this.allTableNames.filter(table => 
-        table.toLowerCase().includes(keyword)
-      );
-    } else {
-      this.filteredTableNames = [...this.allTableNames];
-    }
-    this.showTableNameDropdown = true;
-  }
-
-  onTableNameFocus(): void {
-    this.showTableNameDropdown = true;
-    this.showDatabaseDropdown = false;
-  }
-
-  selectTableName(table: string): void {
-    this.filters.tableName = table;
-    this.showTableNameDropdown = false;
-  }
-
-  // 点击外部关闭下拉框
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: Event): void {
-    const target = event.target as HTMLElement;
-    if (!target.closest('.search-dropdown-container')) {
-      this.showDatabaseDropdown = false;
-      this.showTableNameDropdown = false;
-    }
+  // 更新表格数据
+  updateTableData(): void {
+    // 计算分页数据
+    const start = (this.pagination.currentPage - 1) * this.pagination.pageSize.size;
+    const end = start + this.pagination.pageSize.size;
+    const paginatedData = this.filteredData.slice(start, end);
+    
+    // 设置表格数据源（只传入当前页数据）
+    this.srcData = {
+      data: paginatedData,
+      state: {
+        searched: true,
+        sorted: !!this.sortField,
+        paginated: true
+      }
+    };
+    
+    // 同步更新显示数据
+    this.displayedData = [...paginatedData];
   }
 
   onSort(field: string): void {
@@ -383,7 +417,7 @@ export class TableSearchComponent implements OnInit {
       this.sortField = field;
       this.sortDirection = 'asc';
     }
-    this.applySort();
+    this.applySort(); // applySort 内部会调用 updateTableData
   }
 
   applySort(): void {
@@ -404,62 +438,72 @@ export class TableSearchComponent implements OnInit {
       
       return 0;
     });
+    
+    // 排序后更新表格显示
+    this.updateTableData();
   }
 
-  goToPage(page: number): void {
-    if (page >= 1 && page <= this.totalPages) {
-      this.currentPage = page;
+  // 分页变化（页码变化）
+  onPageChange(page: any): void {
+    const pageNum = typeof page === 'number' ? page : parseInt(page, 10);
+    if (pageNum && pageNum !== this.pagination.currentPage) {
+      this.pagination.currentPage = pageNum;
+      this.updateTableData();
     }
   }
 
-  onPageSizeChange(): void {
-    this.currentPage = 1;
+  onPageSizeChange(event: any): void {
+    // 处理 pageSize 变化事件
+    const newSize = typeof event === 'number' ? event : (event.size || event);
+    this.pagination.pageSize.size = newSize;
+    this.currentPageSize = newSize;
+    this.pagination.currentPage = 1; // 重置到第一页
+    this.updateTableData();
+  }
+  
+  // 处理下拉选择器的 pageSize 变化
+  onPageSizeSelectChange(size: any): void {
+    const newSize = parseInt(size, 10);
+    this.pagination.pageSize.size = newSize;
+    this.currentPageSize = newSize;
+    this.pagination.currentPage = 1; // 重置到第一页
+    this.updateTableData();
+  }
+  
+  // 处理 tiny-ng 分页组件的 pageUpdate 事件
+  // TiPaginationEvent: { currentPage: number, size: number, totalNumber: number }
+  onPageUpdate(event: any): void {
+    this.pagination.currentPage = event.currentPage;
+    this.pagination.pageSize.size = event.size;
+    this.currentPageSize = event.size;
+    this.updateTableData();
   }
 
-  // 列拖拽 - 开始拖拽
-  onDragStart(event: DragEvent, index: number): void {
-    this.dragIndex = index;
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'move';
-      event.dataTransfer.setData('text/plain', index.toString());
-    }
+  // 表格状态更新（排序、分页、搜索）
+  onStateUpdate(table: any): void {
+    // 由于我们手动管理分页，此方法可以为空或只处理特定事件
+    // 排序已通过列头点击处理
+    // 分页已通过 ti-pagination 组件处理
+  }
+  
+  // 选择行（从 displayedDataChange 事件处理）
+  onDisplayedDataChange(data: any[]): void {
+    // 这里可以通过其他方式处理行选择
   }
 
-  // 列拖拽 - 拖拽经过
-  onDragOver(event: DragEvent, index: number): void {
-    event.preventDefault();
-    if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = 'move';
-    }
-    this.dragOverIndex = index;
-  }
-
-  // 列拖拽 - 拖拽结束
-  onDragEnd(): void {
-    this.dragIndex = -1;
-    this.dragOverIndex = -1;
-  }
-
-  // 列拖拽 - 放置
-  onDrop(event: DragEvent, targetIndex: number): void {
-    event.preventDefault();
-    if (this.dragIndex !== -1 && this.dragIndex !== targetIndex) {
-      const column = this.draggableColumns[this.dragIndex];
-      this.draggableColumns.splice(this.dragIndex, 1);
-      this.draggableColumns.splice(targetIndex, 0, column);
-    }
-    this.dragIndex = -1;
-    this.dragOverIndex = -1;
-  }
-
-  // 选择行
-  onRowSelect(row: TableRow): void {
+  // 处理行点击选择（通过表格行点击事件）
+  onRowClick(row: TableRow): void {
     if (this.selectedRow === row) {
       this.selectedRow = null;
     } else {
       this.selectedRow = row;
       this.generateHistoryData(row);
     }
+  }
+
+  // TrackBy 函数
+  trackByTablename(index: number, item: TableRow): string {
+    return item.tablename;
   }
 
   // 生成30天历史数据

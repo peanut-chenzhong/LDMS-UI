@@ -1,7 +1,11 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import * as XLSX from 'xlsx';
+import { TiTableModule } from '@opentiny/ng-table';
+import { TiButtonModule } from '@opentiny/ng-button';
+import { TiSelectModule } from '@opentiny/ng-select';
+import { TiPaginationModule } from '@opentiny/ng-pagination';
 
 interface TaskExecution {
   id: string;
@@ -27,7 +31,14 @@ interface AnalysisTask {
 @Component({
   selector: 'app-task-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule, 
+    FormsModule,
+    TiTableModule,
+    TiButtonModule,
+    TiSelectModule,
+    TiPaginationModule
+  ],
   templateUrl: './task-list.html',
   styleUrl: './task-list.scss'
 })
@@ -35,11 +46,27 @@ export class TaskListComponent implements OnInit {
   // 数据
   allTasks: AnalysisTask[] = [];
   filteredTasks: AnalysisTask[] = [];
+  displayedTasks: AnalysisTask[] = [];
 
-  // 分页
-  currentPage = 1;
-  pageSize = 10;
-  pageSizeOptions = [10, 20, 30, 50, 100];
+  // tiny-ng 表格数据源
+  srcData = {
+    data: [] as AnalysisTask[],
+    state: {
+      searched: false,
+      sorted: false,
+      paginated: true
+    }
+  };
+
+  // tiny-ng 分页配置
+  pagination = {
+    currentPage: 1,
+    pageSize: {
+      options: [10, 20, 30, 50, 100],
+      size: 10
+    } as any,
+    totalNumber: 0
+  };
 
   // 排序
   sortField: string = '';
@@ -53,8 +80,8 @@ export class TaskListComponent implements OnInit {
   // 展开的任务行
   expandedTaskId: string | null = null;
 
-  // 状态筛选
-  statusFilter = '';
+  // 状态筛选（tiny-ng 格式）
+  selectedStatus: any = null;
   statusOptions = [
     { value: '', label: '全部状态' },
     { value: 'pending', label: '待执行' },
@@ -67,17 +94,13 @@ export class TaskListComponent implements OnInit {
   // 任务名搜索
   searchTaskName = '';
 
-  // 表搜索
-  searchDatabase = '';
-  searchTableName = '';
+  // 表搜索（tiny-ng 格式）
+  selectedSearchDatabase: any = null;
+  selectedSearchTableName: any = null;
 
-  // 搜索下拉选项
-  allDatabases: string[] = [];
-  allTableNames: string[] = [];
-  filteredDatabases: string[] = [];
-  filteredTableNames: string[] = [];
-  showDatabaseDropdown = false;
-  showTableNameDropdown = false;
+  // 搜索下拉选项（tiny-ng 格式）
+  allDatabases: any[] = [];
+  allTableNames: any[] = [];
 
   // 新增任务弹窗
   showCreateModal = false;
@@ -114,44 +137,37 @@ export class TaskListComponent implements OnInit {
   };
   databaseList = Object.keys(this.databaseTables);
 
-  get totalPages(): number {
-    return Math.ceil(this.filteredTasks.length / this.pageSize) || 1;
-  }
-
-  get paginatedTasks(): AnalysisTask[] {
-    const start = (this.currentPage - 1) * this.pageSize;
-    return this.filteredTasks.slice(start, start + this.pageSize);
-  }
-
-  get visiblePages(): (number | string)[] {
-    const pages: (number | string)[] = [];
-    const total = this.totalPages;
-    const current = this.currentPage;
-
-    if (total <= 7) {
-      for (let i = 1; i <= total; i++) {
-        pages.push(i);
-      }
-    } else {
-      pages.push(1);
-      if (current > 3) {
-        pages.push('...');
-      }
-      for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
-        pages.push(i);
-      }
-      if (current < total - 2) {
-        pages.push('...');
-      }
-      pages.push(total);
-    }
-    return pages;
-  }
-
   ngOnInit(): void {
     this.generateMockData();
     this.filteredTasks = [...this.allTasks];
+    this.pagination.totalNumber = this.filteredTasks.length;
     this.extractSearchOptions();
+    this.updateTableData();
+  }
+
+  // 更新表格数据
+  updateTableData(): void {
+    const start = (this.pagination.currentPage - 1) * this.pagination.pageSize.size;
+    const end = start + this.pagination.pageSize.size;
+    const paginatedData = this.filteredTasks.slice(start, end);
+    
+    this.srcData = {
+      data: paginatedData,
+      state: {
+        searched: true,
+        sorted: !!this.sortField,
+        paginated: true
+      }
+    };
+    
+    this.displayedTasks = [...paginatedData];
+  }
+
+  // tiny-ng 分页事件处理
+  onPageUpdate(event: any): void {
+    this.pagination.currentPage = event.currentPage;
+    this.pagination.pageSize.size = event.size;
+    this.updateTableData();
   }
 
   // 从任务数据中提取搜索选项
@@ -167,10 +183,15 @@ export class TaskListComponent implements OnInit {
       });
     });
 
-    this.allDatabases = Array.from(databases).sort();
-    this.allTableNames = Array.from(tableNames).sort();
-    this.filteredDatabases = [...this.allDatabases];
-    this.filteredTableNames = [...this.allTableNames];
+    // 转换为 tiny-ng select 需要的格式
+    this.allDatabases = Array.from(databases).sort().map(db => ({
+      label: db,
+      value: db
+    }));
+    this.allTableNames = Array.from(tableNames).sort().map(table => ({
+      label: table,
+      value: table
+    }));
   }
 
   generateMockData(): void {
@@ -290,7 +311,7 @@ export class TaskListComponent implements OnInit {
   filterTasks(): void {
     this.filteredTasks = this.allTasks.filter(task => {
       // 状态过滤
-      if (this.statusFilter && task.status !== this.statusFilter) {
+      if (this.selectedStatus && this.selectedStatus.value && task.status !== this.selectedStatus.value) {
         return false;
       }
       
@@ -303,10 +324,10 @@ export class TaskListComponent implements OnInit {
       }
       
       // 表搜索过滤
-      if (this.searchDatabase || this.searchTableName) {
-        const dbSearch = this.searchDatabase.toLowerCase().trim();
-        const tableSearch = this.searchTableName.toLowerCase().trim();
-        
+      const dbSearch = this.selectedSearchDatabase ? this.selectedSearchDatabase.value.toLowerCase().trim() : '';
+      const tableSearch = this.selectedSearchTableName ? this.selectedSearchTableName.value.toLowerCase().trim() : '';
+      
+      if (dbSearch || tableSearch) {
         // 检查任务的表列表中是否有匹配的表
         const hasMatchingTable = task.tables.some(tableName => {
           const [db, table] = tableName.split('.');
@@ -325,81 +346,28 @@ export class TaskListComponent implements OnInit {
     
     if (this.sortField) {
       this.applySort();
+    } else {
+      this.pagination.currentPage = 1;
+      this.pagination.totalNumber = this.filteredTasks.length;
+      this.updateTableData();
     }
-    this.currentPage = 1;
   }
 
   onSearch(): void {
     this.filterTasks();
-    this.showDatabaseDropdown = false;
-    this.showTableNameDropdown = false;
   }
 
   onReset(): void {
-    this.statusFilter = '';
+    this.selectedStatus = null;
     this.searchTaskName = '';
-    this.searchDatabase = '';
-    this.searchTableName = '';
-    this.filteredDatabases = [...this.allDatabases];
-    this.filteredTableNames = [...this.allTableNames];
-    this.filterTasks();
+    this.selectedSearchDatabase = null;
+    this.selectedSearchTableName = null;
+    this.filteredTasks = [...this.allTasks];
+    this.pagination.currentPage = 1;
+    this.pagination.totalNumber = this.filteredTasks.length;
+    this.updateTableData();
   }
 
-  // Database 下拉搜索
-  onDatabaseInputChange(): void {
-    const keyword = this.searchDatabase.toLowerCase().trim();
-    if (keyword) {
-      this.filteredDatabases = this.allDatabases.filter(db => 
-        db.toLowerCase().includes(keyword)
-      );
-    } else {
-      this.filteredDatabases = [...this.allDatabases];
-    }
-    this.showDatabaseDropdown = true;
-  }
-
-  onDatabaseFocus(): void {
-    this.showDatabaseDropdown = true;
-    this.showTableNameDropdown = false;
-  }
-
-  selectDatabase(db: string): void {
-    this.searchDatabase = db;
-    this.showDatabaseDropdown = false;
-  }
-
-  // TableName 下拉搜索
-  onTableNameInputChange(): void {
-    const keyword = this.searchTableName.toLowerCase().trim();
-    if (keyword) {
-      this.filteredTableNames = this.allTableNames.filter(table => 
-        table.toLowerCase().includes(keyword)
-      );
-    } else {
-      this.filteredTableNames = [...this.allTableNames];
-    }
-    this.showTableNameDropdown = true;
-  }
-
-  onTableNameFocus(): void {
-    this.showTableNameDropdown = true;
-    this.showDatabaseDropdown = false;
-  }
-
-  selectTableName(table: string): void {
-    this.searchTableName = table;
-    this.showTableNameDropdown = false;
-  }
-
-  // 点击外部关闭下拉框
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: Event): void {
-    const target = event.target as HTMLElement;
-    if (!target.closest('.search-dropdown-container')) {
-      this.showDatabaseDropdown = false;
-      this.showTableNameDropdown = false;
-    }
-  }
 
   onSort(field: string): void {
     if (this.sortField === field) {
@@ -451,16 +419,10 @@ export class TaskListComponent implements OnInit {
 
       return 0;
     });
-  }
-
-  goToPage(page: number): void {
-    if (page >= 1 && page <= this.totalPages) {
-      this.currentPage = page;
-    }
-  }
-
-  onPageSizeChange(): void {
-    this.currentPage = 1;
+    
+    this.pagination.currentPage = 1;
+    this.pagination.totalNumber = this.filteredTasks.length;
+    this.updateTableData();
   }
 
   // 获取状态样式类
