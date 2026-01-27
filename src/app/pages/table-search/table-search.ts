@@ -7,7 +7,6 @@ import { TiTableModule } from '@opentiny/ng-table';
 import { TiButtonModule } from '@opentiny/ng-button';
 import { TiSelectModule } from '@opentiny/ng-select';
 import { TiPaginationModule } from '@opentiny/ng-pagination';
-import { TiDropsearchModule } from '@opentiny/ng-dropsearch';
 
 // 注册 Chart.js 组件
 Chart.register(...registerables);
@@ -30,12 +29,6 @@ interface TableRow {
   [key: string]: string | number;
 }
 
-interface ColumnDef {
-  key: string;
-  label: string;
-  sortable?: boolean;
-}
-
 interface HistoryData {
   date: string;
   tablesize: number;
@@ -56,19 +49,12 @@ interface HistoryData {
     TiTableModule,
     TiButtonModule,
     TiSelectModule,
-    TiPaginationModule,
-    TiDropsearchModule
+    TiPaginationModule
   ],
   templateUrl: './table-search.html',
   styleUrl: './table-search.scss'
 })
 export class TableSearchComponent implements OnInit {
-  // 筛选条件
-  filters = {
-    database: '',
-    tableName: ''
-  };
-
   // 下拉选项（从实际数据中提取）
   allDatabases: any[] = [];
   allTableNames: any[] = [];
@@ -184,9 +170,6 @@ export class TableSearchComponent implements OnInit {
     } as any,
     totalNumber: 0
   };
-  
-  // 当前每页显示数量（用于下拉选择器）
-  currentPageSize: number = 10;
 
   // 数据
   allData: TableRow[] = [];
@@ -257,12 +240,6 @@ export class TableSearchComponent implements OnInit {
       }
     }
   };
-
-  // 获取分页后的数据
-  get paginatedData(): TableRow[] {
-    const start = (this.pagination.currentPage - 1) * this.pagination.pageSize.size;
-    return this.filteredData.slice(start, start + this.pagination.pageSize.size);
-  }
 
   ngOnInit(): void {
     this.generateMockData();
@@ -443,55 +420,14 @@ export class TableSearchComponent implements OnInit {
     this.updateTableData();
   }
 
-  // 分页变化（页码变化）
-  onPageChange(page: any): void {
-    const pageNum = typeof page === 'number' ? page : parseInt(page, 10);
-    if (pageNum && pageNum !== this.pagination.currentPage) {
-      this.pagination.currentPage = pageNum;
-      this.updateTableData();
-    }
-  }
-
-  onPageSizeChange(event: any): void {
-    // 处理 pageSize 变化事件
-    const newSize = typeof event === 'number' ? event : (event.size || event);
-    this.pagination.pageSize.size = newSize;
-    this.currentPageSize = newSize;
-    this.pagination.currentPage = 1; // 重置到第一页
-    this.updateTableData();
-  }
-  
-  // 处理下拉选择器的 pageSize 变化
-  onPageSizeSelectChange(size: any): void {
-    const newSize = parseInt(size, 10);
-    this.pagination.pageSize.size = newSize;
-    this.currentPageSize = newSize;
-    this.pagination.currentPage = 1; // 重置到第一页
-    this.updateTableData();
-  }
-  
   // 处理 tiny-ng 分页组件的 pageUpdate 事件
-  // TiPaginationEvent: { currentPage: number, size: number, totalNumber: number }
   onPageUpdate(event: any): void {
     this.pagination.currentPage = event.currentPage;
     this.pagination.pageSize.size = event.size;
-    this.currentPageSize = event.size;
     this.updateTableData();
   }
 
-  // 表格状态更新（排序、分页、搜索）
-  onStateUpdate(table: any): void {
-    // 由于我们手动管理分页，此方法可以为空或只处理特定事件
-    // 排序已通过列头点击处理
-    // 分页已通过 ti-pagination 组件处理
-  }
-  
-  // 选择行（从 displayedDataChange 事件处理）
-  onDisplayedDataChange(data: any[]): void {
-    // 这里可以通过其他方式处理行选择
-  }
-
-  // 处理行点击选择（通过表格行点击事件）
+  // 处理行点击选择
   onRowClick(row: TableRow): void {
     if (this.selectedRow === row) {
       this.selectedRow = null;
@@ -499,11 +435,6 @@ export class TableSearchComponent implements OnInit {
       this.selectedRow = row;
       this.generateHistoryData(row);
     }
-  }
-
-  // TrackBy 函数
-  trackByTablename(index: number, item: TableRow): string {
-    return item.tablename;
   }
 
   // 生成30天历史数据

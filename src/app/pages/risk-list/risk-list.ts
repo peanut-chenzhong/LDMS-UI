@@ -56,8 +56,6 @@ export class RiskListComponent implements OnInit {
   };
 
   // 搜索
-  searchDatabase = '';
-  searchTableName = '';
   selectedRiskType: any = null;
 
   // 排序

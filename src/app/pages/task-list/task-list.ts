@@ -283,14 +283,6 @@ export class TaskListComponent implements OnInit {
     this.allTasks.sort((a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime());
   }
 
-  generateUUID(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
-  }
-
   randomDateTime(daysBack: number): string {
     const now = new Date();
     const past = new Date(now.getTime() - Math.random() * daysBack * 24 * 60 * 60 * 1000);
@@ -661,14 +653,6 @@ export class TaskListComponent implements OnInit {
       }
       console.log('删除任务:', task.taskName);
     }
-  }
-
-  // 格式化表集合显示（只显示第一张表）
-  formatTables(tables: string[]): string {
-    if (tables.length === 1) {
-      return tables[0];
-    }
-    return `${tables[0]} 等${tables.length}张表`;
   }
 
   // 打开表列表弹窗
